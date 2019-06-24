@@ -43,10 +43,16 @@ void print_type()
     cout << zlua::type_name<T>() << endl;
 }
 
+void fff(int &n)
+{
+    n = 20;
+    cout << n << endl;
+}
+
 int main()
 {
-    using wrapped_tuple_t = typename zlua::wrap_tuple_reference<std::tuple<Role&>>::type;
-    print_type<wrapped_tuple_t>();
+    // using wrapped_tuple_t = typename zlua::wrap_tuple_reference<std::tuple<Role&>>::type;
+    // print_type<wrapped_tuple_t>();
 
     return 0;
 
