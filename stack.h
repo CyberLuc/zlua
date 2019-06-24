@@ -242,26 +242,26 @@ struct stack_op<T, typename std::enable_if<
     // peek
     static void peek(lua_State *ls, Base &b, int pos = -1)
     {
-        ZLUA_ARG_CHECK_THROW(ls, luaL_checkudata(ls, pos, type_info<Base>::get_name()), pos, "incorrect userdata type");
+        // ZLUA_ARG_CHECK_THROW(ls, luaL_checkudata(ls, pos, type_info<Base>::get_name()), pos, "incorrect userdata type");
 
-        auto *object_wrapper = static_cast<UserdataObject *>(lua_newuserdata(ls, sizeof(UserdataObject)));
+        auto *object_wrapper = static_cast<UserdataObject *>(lua_touserdata(ls, pos));
         b = *object_wrapper->ptr;
     }
 
     static void peek(lua_State *ls, Base *&b, int pos = -1)
     {
-        ZLUA_ARG_CHECK_THROW(ls, luaL_checkudata(ls, pos, type_info<Base>::get_name()), pos, "incorrect userdata type");
+        // ZLUA_ARG_CHECK_THROW(ls, luaL_checkudata(ls, pos, type_info<Base>::get_name()), pos, "incorrect userdata type");
 
-        auto *object_wrapper = static_cast<UserdataObject *>(lua_newuserdata(ls, sizeof(UserdataObject)));
-        ZLUA_ARG_CHECK_THROW(ls, object_wrapper->is_const, pos, "cannot cast const " + type_name<Base>() + " to non-const reference");
+        auto *object_wrapper = static_cast<UserdataObject *>(lua_touserdata(ls, pos));
+        ZLUA_ARG_CHECK_THROW(ls, !object_wrapper->is_const, pos, "cannot cast const " + type_name<Base>() + " to non-const reference");
 
         b = object_wrapper->ptr;
     }
 
     static void peek(lua_State *ls, const Base *&b, int pos = -1)
     {
-        ZLUA_ARG_CHECK_THROW(ls, luaL_checkudata(ls, pos, type_info<Base>::get_name()), pos, "incorrect userdata type");
-        auto *object_wrapper = static_cast<UserdataObject *>(lua_newuserdata(ls, sizeof(UserdataObject)));
+        // ZLUA_ARG_CHECK_THROW(ls, luaL_checkudata(ls, pos, type_info<Base>::get_name()), pos, "incorrect userdata type");
+        auto *object_wrapper = static_cast<UserdataObject *>(lua_touserdata(ls, pos));
         b = object_wrapper->ptr;
     }
 
