@@ -26,7 +26,7 @@ Yet another C++/Lua bind library, a very very early version.
 
 * Enum Support
 
-    TODO
+    Both `enum` and `enum class` are supported. Use them at will.
 
 * Object Lifetime Management Support
 
@@ -51,6 +51,22 @@ struct Info
 {
     int id = 0;
     std::string content;
+};
+
+enum Enum
+{
+    Zero,
+    One,
+    Two,
+    Three,
+};
+
+enum class EnumClass
+{
+    Zero,
+    One,
+    Two,
+    Three,
 };
 
 struct Role
@@ -83,6 +99,16 @@ struct Role
     {
         cout << __FUNCTION__ << " info.id " << info->id << ", info.content " << info->content << endl;
     }
+
+    void print_enum(Enum e)
+    {
+        cout << __FUNCTION__ << " " << e << endl;
+    }
+
+    void print_enum_class(EnumClass e)
+    {
+        cout << __FUNCTION__ << " " << static_cast<typename std::underlying_type<EnumClass>::type>(e) << endl;
+    }
 };
 
 int main()
@@ -101,8 +127,26 @@ int main()
         .def("get_age", &Role::get_age)
         .def("print_something", &Role::print_something)
         .def("print_info", &Role::print_info)
+        .def("print_enum", &Role::print_enum)
+        .def("print_enum_class", &Role::print_enum_class)
         .def("test_ref", &Role::test_ref)
         .def("test_ptr", &Role::test_ptr)
+        //
+        ;
+
+    engine.reg<Enum>("Enum")
+        .def("Zero", Enum::Zero)
+        .def("One", Enum::One)
+        .def("Two", Enum::Two)
+        .def("Three", Enum::Three)
+        //
+        ;
+
+    engine.reg<EnumClass>("EnumClass")
+        .def("Zero", EnumClass::Zero)
+        .def("One", EnumClass::One)
+        .def("Two", EnumClass::Two)
+        .def("Three", EnumClass::Three)
         //
         ;
 
@@ -110,6 +154,7 @@ int main()
 
     return 0;
 }
+
 ````
 
 Lua side:
@@ -127,21 +172,51 @@ info.id = 111
 info.content = "hello from lua"
 
 role:print_info(info)
+
+print("Enum.Zero = " .. Enum.Zero)
+print("Enum.One = " .. Enum.One)
+print("Enum.Two = " .. Enum.Two)
+print("Enum.Three = " .. Enum.Three)
+print("Enum.Four = " .. (Enum.Four or ""))
+
+print("EnumClass.Zero = " .. EnumClass.Zero)
+print("EnumClass.One = " .. EnumClass.One)
+print("EnumClass.Two = " .. EnumClass.Two)
+print("EnumClass.Three = " .. EnumClass.Three)
+print("EnumClass.Four = " .. (EnumClass.Four or ""))
+
+role:print_enum(Enum.Three)
+role:print_enum_class(EnumClass.Three)
+
 ````
 
 Output:
 ````shell
+g++ -std=c++11 -O0 -llua test.cpp -o ./test
 role.name anonymous, role.age 0
 print_something, 1, 2, 3
 test_ref, zlua, 1, is_same_addr true
 test_ptr, zlua, 1, is_same_addr true
 print_info info.id 111, info.content hello from lua
+Enum.Zero = 0
+Enum.One = 1
+Enum.Two = 2
+Enum.Three = 3
+Enum.Four = 
+EnumClass.Zero = 0
+EnumClass.One = 1
+EnumClass.Two = 2
+EnumClass.Three = 3
+EnumClass.Four = 
+print_enum 3
+print_enum_class 3
 ````
 
 ## Todo list
 * constructor support √
 * reference support √
-* enum support
+* enum support √
+* more enum support: add count, validity check, etc
 * inheritance support
 * lua created object lifetime management
 * multiple constructor support

@@ -118,4 +118,47 @@ private:
     const char *name_;
 };
 
+template <typename E>
+class EnumRegistrar
+{
+public:
+    friend class Engine;
+
+public:
+    EnumRegistrar &def(const char *ename, E e)
+    {
+        lua_getglobal(this->ls_, this->name_);
+
+        lua_pushstring(this->ls_, ename);
+        lua_pushinteger(this->ls_, static_cast<typename std::underlying_type<E>::type>(e));
+        lua_settable(this->ls_, -3);
+
+        return *this;
+    }
+
+private:
+    EnumRegistrar(lua_State *ls, const char *name)
+        : ls_(ls)
+    {
+        // ZLUA_CHECK_THROW(ls, !type_info<T>::is_registered(), "register type<" + type_name<T>() + "> in name '" + name + "' failed, already registered with name " + type_info<T>::get_name());
+        type_info<E>::set_name(name, nullptr);
+        this->name_ = name;
+
+        lua_newtable(this->ls_);
+        lua_setglobal(this->ls_, this->name_);
+    }
+
+    // forbid assignment/copy ctor
+    EnumRegistrar(const EnumRegistrar &) = delete;
+    EnumRegistrar &operator=(const EnumRegistrar &) = delete;
+    EnumRegistrar(EnumRegistrar &&rhs) : ls_(rhs.ls_), name_(rhs.name_)
+    {
+        rhs.ls_ = nullptr;
+        rhs.name_ = nullptr;
+    }
+
+    lua_State *ls_;
+    const char *name_;
+};
+
 } // namespace zlua

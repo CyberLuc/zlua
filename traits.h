@@ -46,9 +46,11 @@ struct is_stl_container
 template <typename T>
 struct is_integral_type
 {
-    const static bool value = std::is_integral<T>::value &&
-                              !std::is_same<char, T>::value &&
-                              !std::is_same<bool, T>::value;
+    const static bool value =
+        (std::is_integral<T>::value ||
+         std::is_enum<T>::value) &&
+        !std::is_same<char, T>::value &&
+        !std::is_same<bool, T>::value;
 };
 
 template <typename T>

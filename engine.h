@@ -63,6 +63,12 @@ public:
         return std::move(Registrar<T, C>(this->ls_, name, args...));
     }
 
+    template <typename E>
+    EnumRegistrar<E> reg(const char *name)
+    {
+        return std::move(EnumRegistrar<E>(this->ls_, name));
+    }
+
 private:
     lua_State *ls_;
     bool dtor_release_;
