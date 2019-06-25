@@ -13,7 +13,9 @@ struct stack_op;
 
 // integral, rejects char, bool
 template <typename T>
-struct stack_op<T, typename std::enable_if<is_integral_type<base_type_t<T>>::value>::type>
+struct stack_op<T, typename std::enable_if<
+                       is_integral_type<base_type_t<T>>::value>::
+                       type>
 {
     using Base = base_type_t<T>;
 
@@ -44,7 +46,7 @@ struct stack_op<T, typename std::enable_if<is_integral_type<base_type_t<T>>::val
 ////////////////////////////////////////////////////////////////////////////////
 // floating point
 template <typename T>
-struct stack_op<T, typename std::enable_if<is_float_type<base_type_t<T>>::value>::type>
+struct stack_op<T, typename std::enable_if<std::is_floating_point<base_type_t<T>>::value>::type>
 {
     using Base = base_type_t<T>;
 
@@ -75,7 +77,7 @@ struct stack_op<T, typename std::enable_if<is_float_type<base_type_t<T>>::value>
 ////////////////////////////////////////////////////////////////////////////////
 // bool
 template <typename T>
-struct stack_op<T, typename std::enable_if<is_bool_type<base_type_t<T>>::value>::type>
+struct stack_op<T, typename std::enable_if<std::is_same<bool, base_type_t<T>>::value>::type>
 {
     static void push(lua_State *ls, bool b)
     {
@@ -252,6 +254,8 @@ struct stack_op<T, typename std::enable_if<
     {
         // ZLUA_ARG_CHECK_THROW(ls, luaL_checkudata(ls, pos, type_info<Base>::get_name()), pos, "incorrect userdata type");
 
+        // cout << __PRETTY_FUNCTION__ << endl;
+
         auto *object_wrapper = static_cast<UserdataObject *>(lua_touserdata(ls, pos));
         ZLUA_ARG_CHECK_THROW(ls, !object_wrapper->is_const, pos, "cannot cast const " + type_name<Base>() + " to non-const reference");
 
@@ -269,6 +273,7 @@ struct stack_op<T, typename std::enable_if<
     template <typename U>
     static void pop(lua_State *ls, U &u, int pos = -1)
     {
+        // cout << __PRETTY_FUNCTION__ << ", " << type_name<base_type_t<U>>() << endl;
         peek(ls, u, pos);
     }
 

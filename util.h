@@ -5,49 +5,22 @@
 
 namespace zlua
 {
-
 ////////////////////////////////////////////////////////////////////////////////
-
-template <bool B, bool... Bs>
-struct and_t
-{
-    const static bool value = B && and_t<Bs...>::value;
-};
-
-template <bool B>
-struct and_t<B>
-{
-    const static bool value = B;
-};
-
-template <bool B, bool... Bs>
-struct or_t
-{
-    const static bool value = B || and_t<Bs...>::value;
-};
-
-template <bool B>
-struct or_t<B>
-{
-    const static bool value = B;
-};
-
+// sequence
+// to generate a sequence of variadic size_t <1,2,3...>
+// used to unpack tuples: std::get<S>(tuple)...
 ////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-
-// to generate a sequence of variadic ints <1,2,3...>
-template <int...>
+template <size_t...>
 struct sequence
 {
 };
 
-template <int N, int... S>
+template <size_t N, size_t... S>
 struct generate_sequence : generate_sequence<N - 1, N - 1, S...>
 {
 };
 
-template <int... S>
+template <size_t... S>
 struct generate_sequence<0, S...>
 {
     using type = sequence<S...>;
@@ -57,89 +30,31 @@ template <typename... Args>
 using sequence_t = typename generate_sequence<sizeof...(Args)>::type;
 
 ////////////////////////////////////////////////////////////////////////////////
+// tuple_fill
+// to universally fill a tuple with values read from lua stack
 ////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-// TODO tuple_caller change to callable object invoke
-template <typename>
-struct tuple_caller;
-
-template <size_t... S>
-struct tuple_caller<sequence<S...>>
-{
-    template <typename R, typename... Args, typename T>
-    static R call(R (*f)(Args...), T &&t)
-    {
-        return f(std::get<S>(t)...);
-    }
-
-    template <typename C, typename R, typename... Args, typename T>
-    static R call(R (C::*f)(Args...), C *c, T &&t)
-    {
-        return (c->*f)(std::get<S>(t)...);
-    }
-};
-
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-
-template <typename Ret, typename... Args, typename Tuple>
-Ret tuple_call(Ret (*f)(Args...), Tuple &&t)
-{
-    return tuple_caller<sequence_t<Args...>>::call(f, t);
-};
-
-template <typename Obj, typename Ret, typename... Args, typename Tuple>
-Ret tuple_call(Ret (Obj::*f)(Args...), Obj *obj, Tuple &&t)
-{
-    return tuple_caller<sequence_t<Args...>>::call(f, obj, t);
-};
-
-template <typename C, typename R, typename T, typename... Args>
-struct WrapperCall
-{
-    static int call(lua_State *ls, R (C::*f)(Args...), C *c, const T &t)
-    {
-        R ret = tuple_call(f, c, t);
-        stack_op<R>::push(ls, std::forward<R>(ret));
-        return 1;
-    }
-};
-
-template <typename C, typename T, typename... Args>
-struct WrapperCall<C, void, T, Args...>
-{
-    static int call(lua_State *ls, void (C::*f)(Args...), C *c, const T &t)
-    {
-        tuple_call(f, c, t);
-        return 0;
-    }
-};
-
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-
-// invoke
-
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-
-
-
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-
 template <size_t N>
 struct tuple_filler
 {
+    template <typename T, typename U>
+    static void read_stack(lua_State *ls, U &u)
+    {
+        stack_op<T>::pop(ls, u);
+    }
+
+    template <typename T, typename U>
+    static void read_stack(lua_State *ls, reference_wrapper<U> &ref)
+    {
+        U *u;
+        stack_op<T>::pop(ls, u);
+        ref.assign(*u);
+    }
+
     template <typename... Args>
     static void fill(lua_State *ls, std::tuple<Args...> &t)
     {
-        using T = decltype(std::get<N - 1>(t));
-        stack_op<base_type_t<T>>::pop(ls, std::get<N - 1>(t));
+        read_stack<base_type_t<decltype(std::get<N - 1>(t))>>(ls, std::get<N - 1>(t));
+        // stack_op<base_type_t<T>>::pop(ls, std::get<N - 1>(t));
         tuple_filler<N - 1>::fill(ls, t);
     }
 };
@@ -152,21 +67,72 @@ struct tuple_filler<0>
 };
 
 ////////////////////////////////////////////////////////////////////////////////
+// tuple_call
+// to universally call a function with tuple as supplier of function parameters
 ////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-
 template <typename>
-struct tuple_construct
+struct tuple_caller;
+
+template <size_t... S>
+struct tuple_caller<sequence<S...>>
 {
-    template <typename T, typename... Args>
-    static T *construct(std::tuple<Args...> &&params)
+    template <typename R, typename... Args, typename T>
+    static R call(R (*f)(Args...), T &t)
     {
-        return nullptr;
+        return f(std::get<S>(t)...);
+    }
+
+    template <typename C, typename R, typename... Args, typename T>
+    static R call(R (C::*f)(Args...), C *c, T &t)
+    {
+        return (c->*f)(std::get<S>(t)...);
     }
 };
 
+template <typename Ret, typename... Args, typename Tuple>
+Ret tuple_call(Ret (*f)(Args...), Tuple &t)
+{
+    return tuple_caller<sequence_t<Args...>>::call(f, t);
+};
+
+template <typename Obj, typename Ret, typename... Args, typename Tuple>
+Ret tuple_call(Ret (Obj::*f)(Args...), Obj *obj, Tuple &t)
+{
+    return tuple_caller<sequence_t<Args...>>::call(f, obj, t);
+};
+
+template <typename C, typename R, typename T, typename... Args>
+struct WrapperCall
+{
+    static int call(lua_State *ls, R (C::*f)(Args...), C *c, T &t)
+    {
+        R ret = tuple_call(f, c, t);
+        stack_op<R>::push(ls, std::forward<R>(ret));
+        return 1;
+    }
+};
+
+template <typename C, typename T, typename... Args>
+struct WrapperCall<C, void, T, Args...>
+{
+    static int call(lua_State *ls, void (C::*f)(Args...), C *c, T &t)
+    {
+        tuple_call(f, c, t);
+        return 0;
+    }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// tuple_construct
+// to universally new an object with tuple as supplier of constructor parameters
+////////////////////////////////////////////////////////////////////////////////
+namespace impl
+{
+template <typename>
+struct tuple_constructor;
+
 template <size_t... S>
-struct tuple_construct<sequence<S...>>
+struct tuple_constructor<sequence<S...>>
 {
     template <typename T, typename... Args>
     static T *construct(std::tuple<Args...> &params)
@@ -174,25 +140,12 @@ struct tuple_construct<sequence<S...>>
         return new T(std::get<S>(params)...);
     }
 };
+} // namespace impl
 
-template <typename T>
-struct object_creator
+template <typename T, typename... Args>
+T *tuple_construct(std::tuple<Args...> &params)
 {
-    template <typename R, typename... Args>
-    static T *create(lua_State *ls, R (*)(Args...))
-    {
-        using wrapped_tuple_t = typename wrap_tuple_reference<std::tuple<Args...>>::type;
-        wrapped_tuple_t params;
-        tuple_filler<sizeof...(Args)>::fill(ls, params);
-
-        return tuple_construct<sequence_t<Args...>>::template construct<T>(params);
-    }
-
-    template <typename R>
-    static T *create(lua_State *ls, R (*)())
-    {
-        return new T;
-    }
-};
+    return impl::tuple_constructor<sequence_t<Args...>>::template construct<T>(params);
+}
 
 } // namespace zlua

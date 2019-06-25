@@ -5,8 +5,14 @@ Yet another C++/Lua bind library, a very very early version.
 C++ side:
 ````C++ test.cpp
     #include <iostream>
-    #include "zlua.h"
+    #include "../zlua.h"
     using namespace std;
+
+    struct Info
+    {
+        int id = 0;
+        std::string content;
+    };
 
     struct Role
     {
@@ -21,30 +27,45 @@ C++ side:
 
         void print_something(int a, int b, const char *p)
         {
-            cout << __PRETTY_FUNCTION__ << ", " << a << ", " << b << ", " << p << endl;
+            cout << __FUNCTION__ << ", " << a << ", " << b << ", " << p << endl;
         }
 
-        void test_ref(Role& role)
+        void test_ref(Role &role)
         {
-            cout << __PRETTY_FUNCTION__ << ", " << role.name << ", " << role.age << endl;
+            cout << __FUNCTION__ << ", " << role.name << ", " << role.age << endl;
         }
 
-        void test_ptr(Role* role)
+        void test_ptr(Role *role)
         {
-            cout << __PRETTY_FUNCTION__ << ", " << role->name << ", " << role->age << endl;
+            cout << __FUNCTION__ << ", " << role->name << ", " << role->age << endl;
+        }
+
+        void print_info(Info *info)
+        {
+            cout << __FUNCTION__ << " info.id " << info->id << ", info.content " << info->content << endl;
         }
     };
 
-    int main {
+    int main()
+    {
         zlua::Engine engine;
-        engine.reg<Role, ctor(const char *, int)>("Role")
+        engine.reg<Info, ctor()>("Info")
+            .def("id", &Info::id)
+            .def("content", &Info::content)
+            //
+            ;
+
+        engine.reg<Role, ctor(const std::string &, int)>("Role")
             .def("name", &Role::name)
             .def("age", &Role::age)
             .def("get_name", &Role::get_name)
             .def("get_age", &Role::get_age)
             .def("print_something", &Role::print_something)
-            // .def("test_ref", &Role::test_ref)
-            .def("test_ptr", &Role::test_ptr);
+            .def("print_info", &Role::print_info)
+            .def("test_ref", &Role::test_ref)
+            .def("test_ptr", &Role::test_ptr)
+            //
+            ;
 
         engine.load_file("./test.lua");
 
@@ -54,16 +75,35 @@ C++ side:
 
 Lua side:
 ````lua test.lua
-    local role = Role.new("Name", 18)
+    local role = Role.new("anonymous", 0)
     print("role.name " .. role.name .. ", role.age " .. role.age)
+    role.name = "zlua"
+    role.age = 1
     role:print_something(1, 2, "3")
+    role:test_ref(role)
     role:test_ptr(role)
+
+    local info = Info.new()
+    info.id = 111
+    info.content = "hello from lua"
+
+    role:print_info(info)
+````
+
+Output:
+````shell
+    role.name anonymous, role.age 0
+    print_something, 1, 2, 3
+    test_ref, zlua, 2
+    test_ptr, zlua, 2
+    print_info info.id 111, info.content hello from lua
 ````
 
 ## Todo list
 * constructor support √
-* reference support
+* reference support √
+* enum support
 * inheritance support
 * lua created object lifetime management
-* enum support
+* multiple constructor support
 * error handle

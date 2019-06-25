@@ -81,20 +81,30 @@ int lua_function_forwarder(lua_State *ls)
     userdata::Object<T> *obj = static_cast<userdata::Object<T> *>(lua_touserdata(ls, 1));
     method_t *func_wrapper = static_cast<method_t *>(lua_touserdata(ls, lua_upvalueindex(1)));
 
-    using wrapped_tuple_t = typename wrap_tuple_reference<std::tuple<Args...>>::type;
+    using wrapped_tuple_t = pack_tuple_t<Args...>;
     wrapped_tuple_t params;
+    // cout << __PRETTY_FUNCTION__ << " " << type_name<wrapped_tuple_t>() << endl;
     tuple_filler<sizeof...(Args)>::fill(ls, params);
 
     WrapperCall<T, R, decltype(params), Args...>::call(ls, func_wrapper->ptr, obj->ptr, params);
     return std::is_same<R, void>::value ? 0 : 1;
 }
 
-template <typename T, typename C>
+template <typename T, typename... Args>
 int lua_object_creator(lua_State *ls)
 {
-    T *t = object_creator<T>::create(ls, (C *)nullptr);
+    using tuple_t = pack_tuple_t<Args...>;
+    tuple_t params;
+    tuple_filler<sizeof...(Args)>::fill(ls, params);
+    T *t = tuple_construct<T>(params);
     stack_op<T>::push(ls, t);
     return 1;
+}
+
+template <typename T, typename... Args>
+int (*fetch_creator(void (*)(Args...)))(lua_State *)
+{
+    return &lua_object_creator<T, Args...>;
 }
 
 } // namespace zlua

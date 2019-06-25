@@ -84,7 +84,7 @@ private:
         lua_newtable(this->ls_);
 
         lua_pushstring(this->ls_, "new");
-        lua_pushcfunction(this->ls_, (&lua_object_creator<T, Ctor>));
+        lua_pushcfunction(this->ls_, fetch_creator<T>((Ctor *)0));
         lua_settable(this->ls_, -3);
 
         lua_setglobal(this->ls_, this->name_);
