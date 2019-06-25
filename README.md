@@ -1,6 +1,45 @@
 # zlua
 Yet another C++/Lua bind library, a very very early version.
 
+## Features
+* Reference/Pointer Support
+
+    Supports to use `[const] T&` and `[const] T*` to classes as function parameter types.
+
+    You can `new` an object in lua, and pass it back to C++ function either as a reference or pointer.
+
+    But for other plain types, such as `int`, `double` and `char`, their reference and pointer parts are prohibited. You cannot register functions with reference or pointer to these types. Just use these types directly.
+
+    If your function's return value is some success flag and you want to pass a reference or pointer to function to get its real result, you have to find another way. Multiple return value can handle this situation.
+
+    Moreover, non-const `std::string&` and `[const] std::string*` are prohibited to use, too.
+
+* const/non-const Support
+
+    All objects created in lua are non-const objects. But you can pass a const object reference or pointer from C++ to lua.
+
+    When accessing a non-const member function or write to a member variable of a const object, zlua will throw an exception complaing constness violation.
+
+* Inheritance Support
+
+    TODO
+
+* Enum Support
+
+    TODO
+
+* Object Lifetime Management Support
+
+    You can create objects in lua without worrying about memory leaks or hvaing to delete it manually some time later.
+
+    Object will be deleted automatically when lua gc detects there has no valid reference exist.
+
+* Multiple Return Value Support
+
+    TODO
+
+    So-called `Multiple Return Value Support`. Actually it's just some functions that defined to return a std::tuple. zlua pushes tuple_elements onto stack individually, and you get multiple return values in lua.
+
 ## Usage
 C++ side:
 ````C++ test.cpp
