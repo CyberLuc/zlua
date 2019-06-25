@@ -32,12 +32,12 @@ C++ side:
 
         void test_ref(Role &role)
         {
-            cout << __FUNCTION__ << ", " << role.name << ", " << role.age << endl;
+            cout << __FUNCTION__ << ", " << role.name << ", " << role.age << ", is_same_addr " << boolalpha << (this == &role) << endl;
         }
 
         void test_ptr(Role *role)
         {
-            cout << __FUNCTION__ << ", " << role->name << ", " << role->age << endl;
+            cout << __FUNCTION__ << ", " << role->name << ", " << role->age << ", is_same_addr " << boolalpha << (this == role) << endl;
         }
 
         void print_info(Info *info)
@@ -94,8 +94,8 @@ Output:
 ````shell
     role.name anonymous, role.age 0
     print_something, 1, 2, 3
-    test_ref, zlua, 2
-    test_ptr, zlua, 2
+    test_ref, zlua, 1, is_same_addr true
+    test_ptr, zlua, 1, is_same_addr true
     print_info info.id 111, info.content hello from lua
 ````
 

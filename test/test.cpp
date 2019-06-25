@@ -26,12 +26,12 @@ struct Role
 
     void test_ref(Role &role)
     {
-        cout << __FUNCTION__ << ", " << role.name << ", " << role.age << endl;
+        cout << __FUNCTION__ << ", " << role.name << ", " << role.age << ", is_same_addr " << boolalpha << (this == &role) << endl;
     }
 
     void test_ptr(Role *role)
     {
-        cout << __FUNCTION__ << ", " << role->name << ", " << role->age << endl;
+        cout << __FUNCTION__ << ", " << role->name << ", " << role->age << ", is_same_addr " << boolalpha << (this == role) << endl;
     }
 
     void print_info(Info *info)
