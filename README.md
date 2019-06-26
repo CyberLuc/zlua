@@ -216,8 +216,9 @@ print_enum_class 3
 * constructor support √
 * reference support √
 * enum support √
+* single inheritance support √
+* multiple inheritance support
 * more enum support: add count, validity check, etc
-* inheritance support
 * lua created object lifetime management
 * multiple constructor support
 * error handle

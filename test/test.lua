@@ -1,28 +1,17 @@
-local role = Role.new("anonymous", 0)
-print("role.name " .. role.name .. ", role.age " .. role.age)
-role.name = "zlua"
-role.age = 1
-role:print_something(1, 2, "3")
-role:test_ref(role)
-role:test_ptr(role)
+local derived = Derived.new()
 
-local info = Info.new()
-info.id = 111
-info.content = "hello from lua"
+print("derived:say3()\t\t\t")
+derived:say3()
 
-role:print_info(info)
+print("derived:say()\t\t\t")
+derived:say()
 
-print("Enum.Zero = " .. Enum.Zero)
-print("Enum.One = " .. Enum.One)
-print("Enum.Two = " .. Enum.Two)
-print("Enum.Three = " .. Enum.Three)
-print("Enum.Four = " .. (Enum.Four or ""))
+print("derived:to_base():say()\t\t")
+derived:to_base():say()
 
-print("EnumClass.Zero = " .. EnumClass.Zero)
-print("EnumClass.One = " .. EnumClass.One)
-print("EnumClass.Two = " .. EnumClass.Two)
-print("EnumClass.Three = " .. EnumClass.Three)
-print("EnumClass.Four = " .. (EnumClass.Four or ""))
+print("derived:say2()\t\t\t")
+derived:say2()
 
-role:print_enum(Enum.Three)
-role:print_enum_class(EnumClass.Three)
+print("derived:to_base():say2()\t")
+derived:to_base():say2()
+

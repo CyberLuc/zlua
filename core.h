@@ -6,6 +6,14 @@
 
 namespace zlua
 {
+// template <typename T, typename... Bases>
+// int metatable_index_function(lua_State *ls)
+// {
+//     // find in metatable of T
+//     // if not found
+//     return metatable_index_function<Bases...>(ls);
+// }
+
 // called by lua when access property, call member function
 template <typename T>
 int metatable_index_function(lua_State *ls)
@@ -14,7 +22,28 @@ int metatable_index_function(lua_State *ls)
     const char *key = luaL_checkstring(ls, 2);
 
     auto n = luaL_getmetafield(ls, 1, key);
-    ZLUA_ARG_CHECK_THROW(ls, (n != LUA_TNIL), 1, "index nil");
+
+    if (n == LUA_TNIL && type_info<T>::is_inherited())
+    {
+        const std::vector<std::string> &parents = type_info<T>::get_all_inherited_names();
+        for (const std::string &name : parents)
+        {
+            cout << "  checking " << key << " in " << name << endl;
+            luaL_getmetatable(ls, ("zlua." + name).c_str());
+            lua_pushstring(ls, key);
+            n = lua_rawget(ls, -2);
+            lua_remove(ls, -2);
+
+            if (n != LUA_TNIL)
+            {
+                cout << "  found " << key << " in " << name << endl;
+                break;
+            }
+            lua_pop(ls, 1);
+        }
+    }
+
+    ZLUA_ARG_CHECK_THROW(ls, (n != LUA_TNIL), 1, (__PRETTY_FUNCTION__ + std::string("index nil ") + key).c_str());
 
     if (lua_isuserdata(ls, -1))
     {
@@ -78,6 +107,10 @@ int lua_function_forwarder(lua_State *ls)
 {
     using method_t = userdata::Method<R (T::*)(Args...)>;
 
+    // TODO FIXIT
+    // function may be called from Derived class
+    // and T is Base class type, whereas udata is userdata::Object<Derived> type
+    // thus cannot be cast to userdata::Object<Base> directly
     userdata::Object<T> *obj = static_cast<userdata::Object<T> *>(lua_touserdata(ls, 1));
     method_t *func_wrapper = static_cast<method_t *>(lua_touserdata(ls, lua_upvalueindex(1)));
 
@@ -97,6 +130,7 @@ int lua_object_creator(lua_State *ls)
     tuple_t params;
     tuple_filler<sizeof...(Args)>::fill(ls, params);
     T *t = tuple_construct<T>(params);
+    cout << (void *)t << endl;
     stack_op<T>::push(ls, t);
     return 1;
 }

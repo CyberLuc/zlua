@@ -32,7 +32,7 @@ public:
     // inheritance
     static void inherit_from(const char *name) { inherited_names_.push_back(name); }
     static bool is_inherited() { return !inherited_names_.empty(); }
-    const std::vector<std::string> &get_all_inherited_names() { return inherited_names_; }
+    static const std::vector<std::string> &get_all_inherited_names() { return inherited_names_; }
 
 private:
     static std::string name_;

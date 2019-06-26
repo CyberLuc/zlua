@@ -54,7 +54,6 @@ struct tuple_filler
     static void fill(lua_State *ls, std::tuple<Args...> &t)
     {
         read_stack<base_type_t<decltype(std::get<N - 1>(t))>>(ls, std::get<N - 1>(t));
-        // stack_op<base_type_t<T>>::pop(ls, std::get<N - 1>(t));
         tuple_filler<N - 1>::fill(ls, t);
     }
 };
@@ -82,9 +81,16 @@ struct tuple_caller<sequence<S...>>
         return f(std::get<S>(t)...);
     }
 
+    // template <typename C, typename R, typename T>
+    // static R call(R (C::*f)(), C *c, T &t)
+    // {
+    //     return (c->*f)();
+    // }
+
     template <typename C, typename R, typename... Args, typename T>
     static R call(R (C::*f)(Args...), C *c, T &t)
     {
+        cout << type_name<C>() << " " << (void *)c << " call " << type_name<decltype(f)>() << endl;
         return (c->*f)(std::get<S>(t)...);
     }
 };
@@ -146,6 +152,16 @@ template <typename T, typename... Args>
 T *tuple_construct(std::tuple<Args...> &params)
 {
     return impl::tuple_constructor<sequence_t<Args...>>::template construct<T>(params);
+}
+
+template <typename Derived, typename Base>
+size_t calc_base_offset()
+{
+    Derived *pd = (Derived *)0x100;
+    Base *pb = (Base *)pd;
+    auto diff = (char *)pb - (char *)pd;
+    // cout << (void *)pb << " - " << (void *)pd << " = " << diff << endl;
+    return diff;
 }
 
 } // namespace zlua

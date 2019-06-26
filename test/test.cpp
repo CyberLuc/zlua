@@ -2,12 +2,6 @@
 #include "../zlua.h"
 using namespace std;
 
-struct Info
-{
-    int id = 0;
-    std::string content;
-};
-
 enum Enum
 {
     Zero,
@@ -16,84 +10,87 @@ enum Enum
     Three,
 };
 
-enum class EnumClass
+class SuperBase
 {
-    Zero,
-    One,
-    Two,
-    Three,
+public:
+    virtual void say()
+    {
+        cout << __FUNCTION__ << " from SuperBase" << endl;
+    }
+
+    virtual void say3()
+    {
+        cout << __FUNCTION__ << " from SuperBase" << endl;
+    }
 };
 
-struct Role
+class Base1 : public SuperBase
 {
-    std::string name;
-    int age;
+public:
+    // virtual void say()
+    // {
+    //     cout << __FUNCTION__ << " from Base1" << endl;
+    // }
 
-    Role(const std::string &name_, int age_)
-        : name(name_), age(age_) {}
-
-    std::string &get_name() { return name; }
-    int get_age() { return age; }
-
-    void print_something(int a, int b, const char *p)
+    void say2()
     {
-        cout << __FUNCTION__ << ", " << a << ", " << b << ", " << p << endl;
-    }
-
-    void test_ref(Role &role)
-    {
-        cout << __FUNCTION__ << ", " << role.name << ", " << role.age << ", is_same_addr " << boolalpha << (this == &role) << endl;
-    }
-
-    void test_ptr(Role *role)
-    {
-        cout << __FUNCTION__ << ", " << role->name << ", " << role->age << ", is_same_addr " << boolalpha << (this == role) << endl;
-    }
-
-    void print_info(Info *info)
-    {
-        cout << __FUNCTION__ << " info.id " << info->id << ", info.content " << info->content << endl;
-    }
-
-    void print_enum(Enum e)
-    {
-        cout << __FUNCTION__ << " " << e << endl;
-    }
-
-    void print_enum_class(EnumClass e)
-    {
-        cout << __FUNCTION__ << " " << static_cast<typename std::underlying_type<EnumClass>::type>(e) << endl;
+        cout << __FUNCTION__ << " from Base1" << endl;
     }
 };
+
+class Base2
+{
+public:
+    virtual void say()
+    {
+        cout << __FUNCTION__ << " from Base2" << endl;
+    }
+
+    char s;
+};
+
+class Derived : public Base2, public Base1
+{
+public:
+    // virtual void say()
+    // {
+    //     cout << __FUNCTION__ << " from Derived" << endl;
+    // }
+
+    void say2()
+    {
+        cout << __FUNCTION__ << " from Derived" << endl;
+    }
+
+    Base1 *to_base()
+    {
+        return this;
+    }
+};
+
+Derived d;
+
+int getd(lua_State *ls)
+{
+    zlua::stack_op<Derived>::push(ls, &d);
+    return 1;
+}
 
 template <typename T>
-void print_type()
-{
-    cout << zlua::type_name<T>() << endl;
-}
+void fun_template() {}
+
+template <typename R, typename... Args>
+std::pair<R, std::tuple<Args...>> deduce_func(R (*)(Args...));
 
 int main()
 {
-    zlua::Engine engine;
-    engine.reg<Info, ctor()>("Info")
-        .def("id", &Info::id)
-        .def("content", &Info::content)
-        //
-        ;
+    // void (*func_array[2])() = {nullptr};
+    // func_array[0] = fun_template<int>;
+    // func_array[1] = fun_template<double>;
 
-    engine.reg<Role, ctor(const std::string &, int)>("Role")
-        .def("name", &Role::name)
-        .def("age", &Role::age)
-        .def("get_name", &Role::get_name)
-        .def("get_age", &Role::get_age)
-        .def("print_something", &Role::print_something)
-        .def("print_info", &Role::print_info)
-        .def("print_enum", &Role::print_enum)
-        .def("print_enum_class", &Role::print_enum_class)
-        .def("test_ref", &Role::test_ref)
-        .def("test_ptr", &Role::test_ptr)
-        //
-        ;
+    // return 0;
+
+    zlua::Engine engine;
 
     engine.reg<Enum>("Enum")
         .def("Zero", Enum::Zero)
@@ -103,13 +100,40 @@ int main()
         //
         ;
 
-    engine.reg<EnumClass>("EnumClass")
-        .def("Zero", EnumClass::Zero)
-        .def("One", EnumClass::One)
-        .def("Two", EnumClass::Two)
-        .def("Three", EnumClass::Three)
+    engine.reg<SuperBase, ctor()>("SuperBase")
+        .def("say", &SuperBase::say)
+        .def("say3", &SuperBase::say3)
         //
         ;
+
+    engine.reg<Base1, ctor()>("Base1", "SuperBase")
+        // .def("say", &Base1::say)
+        .def("say2", &Base1::say2)
+        //
+        ;
+
+    engine.reg<Base2, ctor()>("Base2")
+        .def("say", &Base2::say)
+        //
+        ;
+
+    engine.reg<Derived, ctor()>("Derived", "Base1", "Base2", "SuperBase")
+        .def("to_base", &Derived::to_base)
+        .def("say2", &Derived::say2)
+        .def("getd", getd);
+
+    // typedef void (SuperBase::*mptr)();
+
+    // Derived *obj = &d;
+    // mptr ptr = &SuperBase::say3;
+    // //cout << (void *)obj << " " << zlua::type_name<decltype(ptr)>() << endl;
+
+    // zlua::userdata::Object<Derived> uod;
+    // uod.ptr = obj;
+
+    // zlua::userdata::Object<SuperBase> *uob = (zlua::userdata::Object<SuperBase> *)&uod;
+    // auto o = (SuperBase *)((char *)uob->ptr + zlua::calc_base_offset<Derived, SuperBase>());
+    // (o->*ptr)();
 
     engine.load_file("./test.lua");
 
