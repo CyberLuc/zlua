@@ -52,17 +52,17 @@ public:
 class Derived : public Base2, public Base1
 {
 public:
-    // virtual void say()
-    // {
-    //     cout << __FUNCTION__ << " from Derived" << endl;
-    // }
+    virtual void say()
+    {
+        cout << __FUNCTION__ << " from Derived" << endl;
+    }
 
     void say2()
     {
         cout << __FUNCTION__ << " from Derived" << endl;
     }
 
-    Base1 *to_base()
+    Base1 *to_base1()
     {
         return this;
     }
@@ -106,7 +106,7 @@ int main()
         //
         ;
 
-    engine.reg<Base1, ctor()>("Base1", "SuperBase")
+    engine.reg<Base1, ctor(), SuperBase>("Base1")
         // .def("say", &Base1::say)
         .def("say2", &Base1::say2)
         //
@@ -117,8 +117,8 @@ int main()
         //
         ;
 
-    engine.reg<Derived, ctor()>("Derived", "Base1", "Base2", "SuperBase")
-        .def("to_base", &Derived::to_base)
+    engine.reg<Derived, ctor(), Base2, Base1, SuperBase>("Derived")
+        .def("to_base1", &Derived::to_base1)
         .def("say2", &Derived::say2)
         .def("getd", getd);
 

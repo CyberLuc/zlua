@@ -57,10 +57,10 @@ public:
         return true;
     }
 
-    template <typename T, typename C, typename... Args>
-    Registrar<T, C> reg(const char *name, Args... args)
+    template <typename T, typename C, typename... Bases>
+    Registrar<T, C, Bases...> reg(const char *name)
     {
-        return std::move(Registrar<T, C>(this->ls_, name, args...));
+        return std::move(Registrar<T, C, Bases...>(this->ls_, name));
     }
 
     template <typename E>

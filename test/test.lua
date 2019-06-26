@@ -1,17 +1,17 @@
 local derived = Derived.new()
 
-print("derived:say3()\t\t\t")
+print("derived:say3()")
 derived:say3()
 
-print("derived:say()\t\t\t")
+print("\nderived:say()")
 derived:say()
 
-print("derived:to_base():say()\t\t")
-derived:to_base():say()
+print("\nderived:to_base1():say()")
+derived:to_base1():say()
 
-print("derived:say2()\t\t\t")
+print("\nderived:say2()")
 derived:say2()
 
-print("derived:to_base():say2()\t")
-derived:to_base():say2()
+print("\nderived:to_base1():say2()")
+derived:to_base1():say2()
 

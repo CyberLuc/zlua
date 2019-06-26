@@ -11,6 +11,7 @@ template <typename T>
 struct Object
 {
     T *ptr;
+    size_t offset = 0;
     const bool is_const = std::is_const<T>::value;
 };
 

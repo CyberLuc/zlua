@@ -90,7 +90,6 @@ struct tuple_caller<sequence<S...>>
     template <typename C, typename R, typename... Args, typename T>
     static R call(R (C::*f)(Args...), C *c, T &t)
     {
-        cout << type_name<C>() << " " << (void *)c << " call " << type_name<decltype(f)>() << endl;
         return (c->*f)(std::get<S>(t)...);
     }
 };
@@ -152,16 +151,6 @@ template <typename T, typename... Args>
 T *tuple_construct(std::tuple<Args...> &params)
 {
     return impl::tuple_constructor<sequence_t<Args...>>::template construct<T>(params);
-}
-
-template <typename Derived, typename Base>
-size_t calc_base_offset()
-{
-    Derived *pd = (Derived *)0x100;
-    Base *pb = (Base *)pd;
-    auto diff = (char *)pb - (char *)pd;
-    // cout << (void *)pb << " - " << (void *)pd << " = " << diff << endl;
-    return diff;
 }
 
 } // namespace zlua

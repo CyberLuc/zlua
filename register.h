@@ -6,7 +6,7 @@
 namespace zlua
 {
 
-template <typename T, typename Ctor>
+template <typename T, typename Ctor, typename... Bases>
 class Registrar
 {
     friend class Engine;
@@ -67,12 +67,13 @@ public:
     }
 
 private:
-    template <typename... Args>
-    Registrar(lua_State *ls, const char *name, Args... args)
+    Registrar(lua_State *ls, const char *name)
         : ls_(ls)
     {
-        ZLUA_CHECK_THROW(ls, !type_info<T>::is_registered(), "register type<" + type_name<T>() + "> in name '" + name + "' failed, already registered with name " + type_info<T>::get_name());
-        type_info<T>::set_name(name, args..., nullptr);
+        ZLUA_CHECK_THROW(ls, !type_info<T>::is_registered(), "register type<" + type_name<T>() + "> in name '" + name + "' failed, already registered with name " + type_info<T>::name());
+        type_info<T>::set_name(name);
+        type_info<T>::template inherits_from<Bases...>();
+
         this->name_ = name;
 
         this->prepare_type_table();
@@ -140,8 +141,8 @@ private:
     EnumRegistrar(lua_State *ls, const char *name)
         : ls_(ls)
     {
-        // ZLUA_CHECK_THROW(ls, !type_info<T>::is_registered(), "register type<" + type_name<T>() + "> in name '" + name + "' failed, already registered with name " + type_info<T>::get_name());
-        type_info<E>::set_name(name, nullptr);
+        // ZLUA_CHECK_THROW(ls, !type_info<T>::is_registered(), "register type<" + type_name<T>() + "> in name '" + name + "' failed, already registered with name " + type_info<T>::name());
+        type_info<E>::set_name(name);
         this->name_ = name;
 
         lua_newtable(this->ls_);
