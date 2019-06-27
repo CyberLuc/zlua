@@ -1,5 +1,6 @@
 #pragma once
 #include "common.h"
+#include "traits.h"
 #include <string>
 #include <vector>
 
@@ -40,7 +41,10 @@ struct inherit_helper<T, Base>
 {
     static void inherit()
     {
+        // TODO throw
+        assert((std::is_base_of<Base, T>::value) && "provided type is not base type");
         assert(type_info<Base>::is_registered() && "inherited base type is not registered");
+        assert(!type_info<T>::is_inherited_from(type_info<Base>::name()) && "already inherited");
 
         inheritance_info info;
         info.name = type_info<Base>::name();
@@ -88,16 +92,22 @@ public:
 
     // inheritance
     template <typename... Bases>
-    static void inherits_from()
-    {
-        impl::inherit_helper<T, Bases...>::inherit();
-    }
-
-    static void add_inheritance_info(const inheritance_info &info)
-    {
-        inheritance_info_.push_back(info);
-    }
+    static void inherit_from() { impl::inherit_helper<T, Bases...>::inherit(); }
+    static void add_inheritance_info(const inheritance_info &info) { inheritance_info_.push_back(info); }
     static bool is_inherited() { return !inheritance_info_.empty(); }
+    static bool is_inherited_from(const std::string &name)
+    {
+        for (auto &curr : inheritance_info_)
+        {
+            if (curr.name == name)
+            {
+
+                return true;
+            }
+        }
+
+        return false;
+    }
     static const std::vector<inheritance_info> &get_inheritance_info() { return inheritance_info_; }
 
 private:

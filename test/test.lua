@@ -1,8 +1,4 @@
-local derived = Derived.getd()
-print("\nderived:say2()")
-derived:say2()
-
-do return end
+local derived = Derived.new()
 
 print("derived:say3()")
 derived:say3()
@@ -14,7 +10,7 @@ print("\nderived:to_base1():say()")
 derived:to_base1():say()
 
 print("\nderived:say2()")
-derived:say2()
+derived:say2(nil)
 
 print("\nderived:to_base1():say2()")
 derived:to_base1():say2()

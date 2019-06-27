@@ -220,6 +220,7 @@ print_enum_class 3
 * multiple inheritance support √
 * regsiter function type check support √
 * lua created object lifetime management √
+* function nullptr parameter support √
 * uniform lua userdata for same object
 * stl containers support
 * error handle

@@ -57,9 +57,9 @@ public:
         cout << __FUNCTION__ << " from Derived" << endl;
     }
 
-    void say2()
+    void say2(const Derived *ptr)
     {
-        cout << __FUNCTION__ << " from Derived" << endl;
+        cout << __FUNCTION__ << " from Derived: " << (void *)ptr << endl;
     }
 
     Base1 *to_base1()
@@ -72,7 +72,7 @@ Derived d;
 
 int getd(lua_State *ls)
 {
-    zlua::stack_op<Derived>::push(ls, (const Derived *)&d);
+    zlua::stack_op<Derived>::push(ls, (Derived *)&d);
     return 1;
 }
 
@@ -112,7 +112,8 @@ int main()
         //
         ;
 
-    engine.reg<Derived, ctor(), Base2, Base1, SuperBase>("Derived")
+    engine.reg<Derived, ctor()>("Derived")
+        .inherit<Base2, Base1, SuperBase>()
         .def("to_base1", &Derived::to_base1)
         .def("say", &Derived::say)
         .def("say2", &Derived::say2)

@@ -436,4 +436,22 @@ struct check_return_validity
 
 ////////////////////////////////////////////////////////////////////////////////
 
+template <typename... T>
+struct check_derived_from
+{
+    const static bool value = true;
+};
+
+template <typename T, typename Base, typename... Ts>
+struct check_derived_from<T, Base, Ts...>
+{
+    const static bool value = check_derived_from<T, Base>::value && check_derived_from<T, Ts...>::value;
+};
+
+template <typename T, typename Base>
+struct check_derived_from<T, Base>
+{
+    const static bool value = std::is_base_of<Base, T>::value;
+};
+
 } // namespace zlua

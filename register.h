@@ -38,7 +38,6 @@ public:
 
         auto *wrapper = static_cast<method_t *>(lua_newuserdata(this->ls_, sizeof(method_t)));
         new (wrapper) method_t(f);
-        cout << "defined function " << fname << " which is a " << (wrapper->is_const ? "const" : "non-const") << " function" << endl;
 
         lua_pushcclosure(this->ls_, &lua_function_forwarder<T, R, Args...>, 1);
         lua_rawset(this->ls_, -3);
@@ -63,7 +62,6 @@ public:
 
         auto *wrapper = static_cast<method_t *>(lua_newuserdata(this->ls_, sizeof(method_t)));
         new (wrapper) method_t(f);
-        cout << "defined function " << fname << " which is a " << (wrapper->is_const ? "const" : "non-const") << " function" << endl;
 
         lua_pushcclosure(this->ls_, &lua_function_forwarder<T, R, Args...>, 1);
         lua_rawset(this->ls_, -3);
@@ -76,8 +74,6 @@ public:
     template <typename P>
     Registrar &def(const char *mname, P T::*m)
     {
-        cout << __PRETTY_FUNCTION__ << endl;
-
         luaL_getmetatable(this->ls_, type_info<T>::metatable_name());
         lua_pushstring(this->ls_, mname);
 
@@ -96,13 +92,21 @@ public:
         return *this;
     }
 
+    template <typename... Ts>
+    Registrar &inherit()
+    {
+        type_info<T>::template inherit_from<Ts...>();
+        return *this;
+    }
+
 private:
     Registrar(lua_State *ls, const char *name)
         : ls_(ls)
     {
         ZLUA_CHECK_THROW(ls, !type_info<T>::is_registered(), "register type<" + type_name<T>() + "> in name '" + name + "' failed, already registered with name " + type_info<T>::name());
         type_info<T>::set_name(name);
-        type_info<T>::template inherits_from<Bases...>();
+
+        type_info<T>::template inherit_from<Bases...>();
 
         this->name_ = name;
 
@@ -116,6 +120,10 @@ private:
 
         lua_pushstring(this->ls_, "new");
         lua_pushcfunction(this->ls_, fetch_creator<T>((Ctor *)0));
+        lua_settable(this->ls_, -3);
+
+        lua_pushstring(this->ls_, "clone");
+        lua_pushcfunction(this->ls_, &lua_object_cloner_wrapper<T>::clone);
         lua_settable(this->ls_, -3);
 
         lua_setglobal(this->ls_, this->name_);

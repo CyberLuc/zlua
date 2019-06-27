@@ -112,9 +112,6 @@ int lua_function_forwarder(lua_State *ls)
     return element_size<R>::value;
 }
 
-template <typename T>
-int lua_object_deleter(lua_State *ls);
-
 template <typename T, typename... Args>
 int lua_object_creator(lua_State *ls)
 {
@@ -147,5 +144,31 @@ int lua_object_deleter(lua_State *ls)
 
     return 0;
 }
+
+template <typename T, typename Enabled = void>
+struct lua_object_cloner_wrapper
+{
+    static int clone(lua_State *ls)
+    {
+        // TODO check udata
+        userdata::object_t<T> *obj = static_cast<userdata::object_t<T> *>(lua_touserdata(ls, 1));
+        lua_pop(ls, 1);
+
+        T *t = new T(*obj->ptr);
+        stack_op<T>::push_new(ls, t);
+
+        return 1;
+    }
+};
+
+template <typename T>
+struct lua_object_cloner_wrapper<T, typename std::enable_if<!std::is_copy_constructible<T>::value>::type>
+{
+    static int clone(lua_State *ls)
+    {
+        lua_pushnil(ls);
+        return 1;
+    }
+};
 
 } // namespace zlua

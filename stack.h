@@ -134,6 +134,12 @@ struct stack_op<T, typename std::enable_if<
 
     static void peek(lua_State *ls, const char *&s, int pos = -1)
     {
+        if (lua_isnil(ls, pos) != 0)
+        {
+            s = nullptr;
+            return;
+        }
+
         ZLUA_ARG_CHECK_THROW(ls, lua_isstring(ls, pos), pos, "not a string value");
         s = luaL_checkstring(ls, pos);
     }
@@ -161,7 +167,14 @@ struct stack_op<T, typename std::enable_if<
 private:
     static void _push(lua_State *ls, const char *s, size_t l = 0)
     {
-        l > 0 ? lua_pushlstring(ls, s, l) : lua_pushstring(ls, s);
+        if (s == nullptr)
+        {
+            lua_pushnil(ls);
+        }
+        else
+        {
+            l > 0 ? lua_pushlstring(ls, s, l) : lua_pushstring(ls, s);
+        }
     }
 };
 
@@ -203,6 +216,12 @@ struct stack_op<T, typename std::enable_if<
 
     static void push(lua_State *ls, Base *b, int pos = -1)
     {
+        if (b == nullptr)
+        {
+            lua_pushnil(ls);
+            return;
+        }
+
         auto *object_wrapper = static_cast<userdata_object_t *>(lua_newuserdata(ls, sizeof(userdata_object_t)));
         new (object_wrapper) userdata_object_t;
         object_wrapper->ptr = b;
@@ -212,6 +231,12 @@ struct stack_op<T, typename std::enable_if<
 
     static void push(lua_State *ls, const Base *b, int pos = -1)
     {
+        if (b == nullptr)
+        {
+            lua_pushnil(ls);
+            return;
+        }
+
         auto *object_wrapper = static_cast<const_userdata_object_t *>(lua_newuserdata(ls, sizeof(const_userdata_object_t)));
         new (object_wrapper) const_userdata_object_t;
         object_wrapper->ptr = b;
@@ -240,6 +265,12 @@ struct stack_op<T, typename std::enable_if<
     static void peek(lua_State *ls, Base *&b, int pos = -1)
     {
         // ZLUA_ARG_CHECK_THROW(ls, luaL_checkudata(ls, pos, type_info<Base>::name()), pos, "incorrect userdata type");
+        if (lua_isnil(ls, pos) != 0)
+        {
+            b = nullptr;
+            return;
+        }
+
         auto *object_wrapper = static_cast<userdata_object_t *>(lua_touserdata(ls, pos));
         ZLUA_ARG_CHECK_THROW(ls, !object_wrapper->is_const, pos, "cannot cast const " + type_name<Base>() + " to non-const reference");
 
@@ -248,6 +279,12 @@ struct stack_op<T, typename std::enable_if<
 
     static void peek(lua_State *ls, const Base *&b, int pos = -1)
     {
+        if (lua_isnil(ls, pos) != 0)
+        {
+            b = nullptr;
+            return;
+        }
+
         // ZLUA_ARG_CHECK_THROW(ls, luaL_checkudata(ls, pos, type_info<Base>::name()), pos, "incorrect userdata type");
         auto *object_wrapper = static_cast<userdata_object_t *>(lua_touserdata(ls, pos));
         b = object_wrapper->ptr;
