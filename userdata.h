@@ -1,5 +1,6 @@
 #pragma once
 #include "common.h"
+#include "traits.h"
 
 namespace zlua
 {
@@ -8,7 +9,7 @@ namespace userdata
 {
 
 template <typename T>
-struct Object
+struct object_t
 {
     T *ptr;
     size_t offset = 0;
@@ -17,26 +18,27 @@ struct Object
 };
 
 template <typename F>
-struct Method
+struct method_t
 {
-    Method() {}
-    Method(F f_) : ptr(f_) {}
+    method_t() {}
+    method_t(F f_) : ptr(f_) {}
 
     F ptr;
+    const bool is_const = is_const_member_function_pointer<F>::value;
 };
 
 template <typename P>
-struct Property
+struct property_t
 {
-    Property() {}
-    Property(P p) : ptr(p) {}
+    property_t() {}
+    property_t(P p) : ptr(p) {}
 
     P ptr;
 };
 
-struct PropertyBase
+struct property_base_t
 {
-    PropertyBase() : property(nullptr) {}
+    property_base_t() : property(nullptr) {}
 
     int (*access_handler)(lua_State *, void *, const char *key);
     int (*write_handler)(lua_State *, void *, const char *key);
@@ -44,11 +46,11 @@ struct PropertyBase
 };
 
 template <typename P>
-struct PropertyWrapper : PropertyBase
+struct property_wrapper_t : property_base_t
 {
-    PropertyWrapper() {}
+    property_wrapper_t() {}
 
-    Property<P> property_holder;
+    property_t<P> property_holder;
 };
 
 } // namespace userdata

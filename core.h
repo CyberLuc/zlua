@@ -6,11 +6,10 @@
 
 namespace zlua
 {
-// called by lua when access property, call member function
 template <typename T>
 int metatable_index_function(lua_State *ls)
 {
-    auto *ud = static_cast<userdata::Object<T> *>(lua_touserdata(ls, 1));
+    auto *ud = static_cast<userdata::object_t<T> *>(lua_touserdata(ls, 1));
     const char *key = luaL_checkstring(ls, 2);
 
     auto n = luaL_getmetafield(ls, 1, key);
@@ -39,7 +38,7 @@ int metatable_index_function(lua_State *ls)
 
     if (lua_isuserdata(ls, -1))
     {
-        auto property_base = static_cast<userdata::PropertyBase *>(lua_touserdata(ls, -1));
+        auto property_base = static_cast<userdata::property_base_t *>(lua_touserdata(ls, -1));
         lua_pop(ls, 1);
 
         return property_base->access_handler(ls, property_base->property, key);
@@ -48,7 +47,6 @@ int metatable_index_function(lua_State *ls)
     return 1;
 }
 
-// called by lua when write property
 template <typename T>
 int metatable_newindex_function(lua_State *ls)
 {
@@ -60,7 +58,7 @@ int metatable_newindex_function(lua_State *ls)
 
     if (lua_isuserdata(ls, -1))
     {
-        auto property_base = static_cast<userdata::PropertyBase *>(lua_touserdata(ls, -1));
+        auto property_base = static_cast<userdata::property_base_t *>(lua_touserdata(ls, -1));
         lua_pop(ls, 1);
         return property_base->write_handler(ls, property_base->property, key);
     }
@@ -75,10 +73,10 @@ int metatable_newindex_function(lua_State *ls)
 template <typename T, typename P>
 int access_property_function(lua_State *ls, void *raw_property, const char *key)
 {
-    using property_t = userdata::Property<P T::*>;
+    using property_t = userdata::property_t<P T::*>;
     auto *property = static_cast<property_t *>(raw_property);
 
-    auto *obj = static_cast<userdata::Object<T> *>(lua_touserdata(ls, 1));
+    auto *obj = static_cast<userdata::object_t<T> *>(lua_touserdata(ls, 1));
     stack_op<P>::push(ls, obj->ptr->*(property->ptr));
     return 1;
 }
@@ -86,10 +84,10 @@ int access_property_function(lua_State *ls, void *raw_property, const char *key)
 template <typename T, typename P>
 int write_property_function(lua_State *ls, void *raw_property, const char *key)
 {
-    using property_t = userdata::Property<P T::*>;
+    using property_t = userdata::property_t<P T::*>;
     auto *property = static_cast<property_t *>(raw_property);
 
-    auto *obj = static_cast<userdata::Object<T> *>(lua_touserdata(ls, 1));
+    auto *obj = static_cast<userdata::object_t<T> *>(lua_touserdata(ls, 1));
     stack_op<P>::pop(ls, obj->ptr->*(property->ptr));
     return 0;
 }
@@ -97,19 +95,20 @@ int write_property_function(lua_State *ls, void *raw_property, const char *key)
 template <typename T, typename R, typename... Args>
 int lua_function_forwarder(lua_State *ls)
 {
-    using method_t = userdata::Method<R (T::*)(Args...)>;
+    using method_t = userdata::method_t<R (T::*)(Args...)>;
 
-    userdata::Object<T> *obj = static_cast<userdata::Object<T> *>(lua_touserdata(ls, 1));
-    T *t = reinterpret_cast<T *>(((char *)obj->ptr + obj->offset));
-    obj->offset = 0;
+    userdata::object_t<T> *obj_wrapper = static_cast<userdata::object_t<T> *>(lua_touserdata(ls, 1));
+    T *t = reinterpret_cast<T *>(((char *)obj_wrapper->ptr + obj_wrapper->offset));
+    obj_wrapper->offset = 0;
 
     method_t *func_wrapper = static_cast<method_t *>(lua_touserdata(ls, lua_upvalueindex(1)));
+    assert(!obj_wrapper->is_const || func_wrapper->is_const && "const object can't call non-const member function");
 
     using wrapped_tuple_t = pack_tuple_t<Args...>;
     wrapped_tuple_t params;
     stack_op<wrapped_tuple_t>::pop(ls, params);
 
-    WrapperCall<T, R, decltype(params), Args...>::call(ls, func_wrapper->ptr, t, params);
+    wrapped_tuple_invoke<T, R, decltype(params), Args...>::call(ls, func_wrapper->ptr, t, params);
     return element_size<R>::value;
 }
 
@@ -138,10 +137,9 @@ int (*fetch_creator(void (*)(Args...)))(lua_State *)
 template <typename T>
 int lua_object_deleter(lua_State *ls)
 {
-    userdata::Object<T> *obj = static_cast<userdata::Object<T> *>(lua_touserdata(ls, 1));
+    userdata::object_t<T> *obj = static_cast<userdata::object_t<T> *>(lua_touserdata(ls, 1));
     if (obj->need_release)
     {
-        cout << __PRETTY_FUNCTION__ << " " << (void *)obj->ptr << endl;
         obj->need_release = false;
         delete obj->ptr;
         obj->ptr = nullptr;

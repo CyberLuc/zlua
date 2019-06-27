@@ -30,57 +30,61 @@ template <typename... Args>
 using sequence_t = typename generate_sequence<sizeof...(Args)>::type;
 
 ////////////////////////////////////////////////////////////////////////////////
-// tuple_call
+// tuple_invoke
 // to universally call a function with tuple as supplier of function parameters
 ////////////////////////////////////////////////////////////////////////////////
+namespace impl
+{
+
 template <typename>
-struct tuple_caller;
+struct tuple_invoker;
 
 template <size_t... S>
-struct tuple_caller<sequence<S...>>
+struct tuple_invoker<sequence<S...>>
 {
     template <typename R, typename... Args, typename T>
-    static R call(R (*f)(Args...), T &t)
+    static R invoke(R (*f)(Args...), T &t)
     {
         return f(std::get<S>(t)...);
     }
 
     template <typename C, typename R, typename... Args, typename T>
-    static R call(R (C::*f)(Args...), C *c, T &t)
+    static R invoke(R (C::*f)(Args...), C *c, T &t)
     {
         return (c->*f)(std::get<S>(t)...);
     }
 };
+} // namespace impl
 
 template <typename Ret, typename... Args, typename Tuple>
-Ret tuple_call(Ret (*f)(Args...), Tuple &t)
+Ret tuple_invoke(Ret (*f)(Args...), Tuple &t)
 {
-    return tuple_caller<sequence_t<Args...>>::call(f, t);
+    return impl::tuple_invoker<sequence_t<Args...>>::invoke(f, t);
 };
 
 template <typename Obj, typename Ret, typename... Args, typename Tuple>
-Ret tuple_call(Ret (Obj::*f)(Args...), Obj *obj, Tuple &t)
+Ret tuple_invoke(Ret (Obj::*f)(Args...), Obj *obj, Tuple &t)
 {
-    return tuple_caller<sequence_t<Args...>>::call(f, obj, t);
+    return impl::tuple_invoker<sequence_t<Args...>>::invoke(f, obj, t);
 };
 
 template <typename C, typename R, typename T, typename... Args>
-struct WrapperCall
+struct wrapped_tuple_invoke
 {
     static int call(lua_State *ls, R (C::*f)(Args...), C *c, T &t)
     {
-        R ret = tuple_call(f, c, t);
+        R ret = tuple_invoke(f, c, t);
         stack_op<R>::push(ls, std::forward<R>(ret));
         return 1;
     }
 };
 
 template <typename C, typename T, typename... Args>
-struct WrapperCall<C, void, T, Args...>
+struct wrapped_tuple_invoke<C, void, T, Args...>
 {
     static int call(lua_State *ls, void (C::*f)(Args...), C *c, T &t)
     {
-        tuple_call(f, c, t);
+        tuple_invoke(f, c, t);
         return 0;
     }
 };

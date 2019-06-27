@@ -31,13 +31,39 @@ public:
         static_assert(check_return_validity<R>::value,
                       "can't register function with return type of pointer to non-class/std::string to lua (except for [const] char*)");
 
-        using method_wrapper_t = userdata::Method<R (T::*)(Args...)>;
+        using method_t = userdata::method_t<R (T::*)(Args...)>;
 
         luaL_getmetatable(this->ls_, type_info<T>::metatable_name());
         lua_pushstring(this->ls_, fname);
 
-        auto *wrapper = static_cast<method_wrapper_t *>(lua_newuserdata(this->ls_, sizeof(method_wrapper_t)));
-        new (wrapper) method_wrapper_t(f);
+        auto *wrapper = static_cast<method_t *>(lua_newuserdata(this->ls_, sizeof(method_t)));
+        new (wrapper) method_t(f);
+        cout << "defined function " << fname << " which is a " << (wrapper->is_const ? "const" : "non-const") << " function" << endl;
+
+        lua_pushcclosure(this->ls_, &lua_function_forwarder<T, R, Args...>, 1);
+        lua_rawset(this->ls_, -3);
+
+        lua_pop(this->ls_, 1);
+        return *this;
+    }
+
+    // member function
+    template <typename R, typename... Args>
+    Registrar &def(const char *fname, R (T::*f)(Args...) const)
+    {
+        static_assert(check_params_validity<Args...>::value,
+                      "can't register function with parameter of non-const reference or pointer to non-class type to lua (except for const char*)");
+        static_assert(check_return_validity<R>::value,
+                      "can't register function with return type of pointer to non-class/std::string to lua (except for [const] char*)");
+
+        using method_t = userdata::method_t<R (T::*)(Args...) const>;
+
+        luaL_getmetatable(this->ls_, type_info<T>::metatable_name());
+        lua_pushstring(this->ls_, fname);
+
+        auto *wrapper = static_cast<method_t *>(lua_newuserdata(this->ls_, sizeof(method_t)));
+        new (wrapper) method_t(f);
+        cout << "defined function " << fname << " which is a " << (wrapper->is_const ? "const" : "non-const") << " function" << endl;
 
         lua_pushcclosure(this->ls_, &lua_function_forwarder<T, R, Args...>, 1);
         lua_rawset(this->ls_, -3);
@@ -50,12 +76,12 @@ public:
     template <typename P>
     Registrar &def(const char *mname, P T::*m)
     {
-        //std::cout << __PRETTY_FUNCTION__ << " " << meta::TypeInfo<Obj>::to_metatable_name() << "::" << mname << std::endl;
+        cout << __PRETTY_FUNCTION__ << endl;
 
         luaL_getmetatable(this->ls_, type_info<T>::metatable_name());
         lua_pushstring(this->ls_, mname);
 
-        using property_wrapper_t = userdata::PropertyWrapper<P T::*>;
+        using property_wrapper_t = userdata::property_wrapper_t<P T::*>;
         auto *property_wrapper = (property_wrapper_t *)lua_newuserdata(this->ls_, sizeof(property_wrapper_t));
         new (property_wrapper) property_wrapper_t;
 

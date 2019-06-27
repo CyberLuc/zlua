@@ -263,26 +263,26 @@ struct element_size<void>
 
 ////////////////////////////////////////////////////////////////////////////////
 
-// template <typename T, typename R, typename... Args>
-// using const_member_function_pointer_t = R (T::*)(Args...) const;
+template <typename T, typename R, typename... Args>
+using const_member_function_pointer_t = R (T::*)(Args...) const;
 
-// template <typename T, typename R, typename... Args>
-// using member_function_pointer_t = R (T::*)(Args...);
+template <typename T, typename R, typename... Args>
+using member_function_pointer_t = R (T::*)(Args...);
 
-// template <typename T, typename Enabled = void>
-// struct is_const_member_function_pointer;
+template <typename T, typename Enabled = void>
+struct is_const_member_function_pointer;
 
-// template <typename T>
-// struct is_const_member_function_pointer<T, typename std::enable_if<
-//                                                std::is_member_function_pointer<T>::value>::type>
-// {
-//     template <typename U, typename R, typename... Args>
-//     static char detail(member_function_pointer_t<U, R, Args...>);
-//     template <typename U, typename R, typename... Args>
-//     static int detail(const_member_function_pointer_t<U, R, Args...>);
+template <typename T>
+struct is_const_member_function_pointer<T, typename std::enable_if<
+                                               std::is_member_function_pointer<T>::value>::type>
+{
+    template <typename U, typename R, typename... Args>
+    static char detail(member_function_pointer_t<U, R, Args...>);
+    template <typename U, typename R, typename... Args>
+    static int detail(const_member_function_pointer_t<U, R, Args...>);
 
-//     const static bool value = sizeof(decltype(detail(T()))) == sizeof(int);
-// };
+    const static bool value = sizeof(decltype(detail(T()))) == sizeof(int);
+};
 
 // template <typename T, typename Enabled = void>
 // struct remove_member_function_pointer_const

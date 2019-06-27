@@ -39,7 +39,6 @@ struct stack_op<T, typename std::enable_if<
     static typename std::enable_if<!std::is_pointer<U>::value>::type
     pop(lua_State *ls, U &u, int pos = -1)
     {
-        cout << __PRETTY_FUNCTION__ << endl;
         peek(ls, u, pos);
         lua_remove(ls, pos);
     }
@@ -177,14 +176,14 @@ struct stack_op<T, typename std::enable_if<
                        !is_reference_wrapper<T>::value>::type>
 {
     using Base = base_type_t<T>;
-    using UserdataObject = userdata::Object<Base>;
-    using ConstUserdataObject = userdata::Object<const Base>;
+    using userdata_object_t = userdata::object_t<Base>;
+    using const_userdata_object_t = userdata::object_t<const Base>;
 
     // rvalue
     static void push(lua_State *ls, Base &&b, int pos = -1)
     {
-        auto *object_wrapper = static_cast<UserdataObject *>(lua_newuserdata(ls, sizeof(UserdataObject)));
-        new (object_wrapper) UserdataObject;
+        auto *object_wrapper = static_cast<userdata_object_t *>(lua_newuserdata(ls, sizeof(userdata_object_t)));
+        new (object_wrapper) userdata_object_t;
         object_wrapper->ptr = new Base(std::move(b));
         object_wrapper->need_release = true;
 
@@ -194,8 +193,8 @@ struct stack_op<T, typename std::enable_if<
     // lvalue
     static void push_new(lua_State *ls, Base *b, int pos = -1)
     {
-        auto *object_wrapper = static_cast<UserdataObject *>(lua_newuserdata(ls, sizeof(UserdataObject)));
-        new (object_wrapper) UserdataObject;
+        auto *object_wrapper = static_cast<userdata_object_t *>(lua_newuserdata(ls, sizeof(userdata_object_t)));
+        new (object_wrapper) userdata_object_t;
         object_wrapper->ptr = b;
         object_wrapper->need_release = true;
 
@@ -204,8 +203,8 @@ struct stack_op<T, typename std::enable_if<
 
     static void push(lua_State *ls, Base *b, int pos = -1)
     {
-        auto *object_wrapper = static_cast<UserdataObject *>(lua_newuserdata(ls, sizeof(UserdataObject)));
-        new (object_wrapper) UserdataObject;
+        auto *object_wrapper = static_cast<userdata_object_t *>(lua_newuserdata(ls, sizeof(userdata_object_t)));
+        new (object_wrapper) userdata_object_t;
         object_wrapper->ptr = b;
 
         prepare_metatable(ls);
@@ -213,8 +212,8 @@ struct stack_op<T, typename std::enable_if<
 
     static void push(lua_State *ls, const Base *b, int pos = -1)
     {
-        auto *object_wrapper = static_cast<ConstUserdataObject *>(lua_newuserdata(ls, sizeof(ConstUserdataObject)));
-        new (object_wrapper) ConstUserdataObject;
+        auto *object_wrapper = static_cast<const_userdata_object_t *>(lua_newuserdata(ls, sizeof(const_userdata_object_t)));
+        new (object_wrapper) const_userdata_object_t;
         object_wrapper->ptr = b;
 
         prepare_metatable(ls);
@@ -234,14 +233,14 @@ struct stack_op<T, typename std::enable_if<
     static void peek(lua_State *ls, Base &b, int pos = -1)
     {
         // ZLUA_ARG_CHECK_THROW(ls, luaL_checkudata(ls, pos, type_info<Base>::name()), pos, "incorrect userdata type");
-        auto *object_wrapper = static_cast<UserdataObject *>(lua_touserdata(ls, pos));
+        auto *object_wrapper = static_cast<userdata_object_t *>(lua_touserdata(ls, pos));
         b = *object_wrapper->ptr;
     }
 
     static void peek(lua_State *ls, Base *&b, int pos = -1)
     {
         // ZLUA_ARG_CHECK_THROW(ls, luaL_checkudata(ls, pos, type_info<Base>::name()), pos, "incorrect userdata type");
-        auto *object_wrapper = static_cast<UserdataObject *>(lua_touserdata(ls, pos));
+        auto *object_wrapper = static_cast<userdata_object_t *>(lua_touserdata(ls, pos));
         ZLUA_ARG_CHECK_THROW(ls, !object_wrapper->is_const, pos, "cannot cast const " + type_name<Base>() + " to non-const reference");
 
         b = object_wrapper->ptr;
@@ -250,7 +249,7 @@ struct stack_op<T, typename std::enable_if<
     static void peek(lua_State *ls, const Base *&b, int pos = -1)
     {
         // ZLUA_ARG_CHECK_THROW(ls, luaL_checkudata(ls, pos, type_info<Base>::name()), pos, "incorrect userdata type");
-        auto *object_wrapper = static_cast<UserdataObject *>(lua_touserdata(ls, pos));
+        auto *object_wrapper = static_cast<userdata_object_t *>(lua_touserdata(ls, pos));
         b = object_wrapper->ptr;
     }
 
@@ -289,7 +288,7 @@ struct stack_op<T, typename std::enable_if<is_reference_wrapper<T>::value>::type
 
     static void pop(lua_State *ls, T &t, int pos = -1)
     {
-        stack_op<typename T::referenced_type>::peek(ls, t.get_ptr(), pos);
+        stack_op<typename T::referenced_type>::pop(ls, t.get_ptr(), pos);
     }
 };
 

@@ -72,7 +72,7 @@ Derived d;
 
 int getd(lua_State *ls)
 {
-    zlua::stack_op<Derived>::push(ls, &d);
+    zlua::stack_op<Derived>::push(ls, (const Derived *)&d);
     return 1;
 }
 
@@ -84,13 +84,6 @@ std::pair<R, std::tuple<Args...>> deduce_func(R (*)(Args...));
 
 int main()
 {
-    // void (*func_array[2])() = {nullptr};
-    // func_array[0] = fun_template<int>;
-    // func_array[1] = fun_template<double>;
-
-    cout << std::is_class<std::tuple<int, int>>::value << endl;
-    cout << zlua::type_name<std::tuple<int, int>>() << endl;
-
     zlua::Engine engine;
     auto ls = engine.get_lua_state();
 
@@ -131,10 +124,10 @@ int main()
     // mptr ptr = &SuperBase::say3;
     // //cout << (void *)obj << " " << zlua::type_name<decltype(ptr)>() << endl;
 
-    // zlua::userdata::Object<Derived> uod;
+    // zlua::userdata::object_t<Derived> uod;
     // uod.ptr = obj;
 
-    // zlua::userdata::Object<SuperBase> *uob = (zlua::userdata::Object<SuperBase> *)&uod;
+    // zlua::userdata::object_t<SuperBase> *uob = (zlua::userdata::object_t<SuperBase> *)&uod;
     // auto o = (SuperBase *)((char *)uob->ptr + zlua::calc_base_offset<Derived, SuperBase>());
     // (o->*ptr)();
 
