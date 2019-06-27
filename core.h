@@ -6,21 +6,11 @@
 
 namespace zlua
 {
-// template <typename T, typename... Bases>
-// int metatable_index_function(lua_State *ls)
-// {
-//     // find in metatable of T
-//     // if not found
-//     return metatable_index_function<Bases...>(ls);
-// }
-
 // called by lua when access property, call member function
 template <typename T>
 int metatable_index_function(lua_State *ls)
 {
     auto *ud = static_cast<userdata::Object<T> *>(lua_touserdata(ls, 1));
-    ud->offset = 0;
-
     const char *key = luaL_checkstring(ls, 2);
 
     auto n = luaL_getmetafield(ls, 1, key);
@@ -111,6 +101,7 @@ int lua_function_forwarder(lua_State *ls)
 
     userdata::Object<T> *obj = static_cast<userdata::Object<T> *>(lua_touserdata(ls, 1));
     T *t = reinterpret_cast<T *>(((char *)obj->ptr + obj->offset));
+    obj->offset = 0;
 
     method_t *func_wrapper = static_cast<method_t *>(lua_touserdata(ls, lua_upvalueindex(1)));
 

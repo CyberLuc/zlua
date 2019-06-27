@@ -218,7 +218,8 @@ print_enum_class 3
 * enum support √
 * single inheritance support √
 * multiple inheritance support √
-* more enum support: add count, validity check, etc
+* regsiter function type check support √
 * lua created object lifetime management
 * multiple constructor support
 * error handle
+* more enum support: add count, validity check, etc

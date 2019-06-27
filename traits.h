@@ -87,28 +87,7 @@ template <typename T>
 struct reference_wrapper;
 
 template <typename T>
-struct is_reference_wrapper
-{
-    template <typename U>
-    static int detail(reference_wrapper<U> *);
-
-    template <typename U>
-    static char detail(U *);
-
-    const static bool value = sizeof(decltype(detail((T *)(nullptr)))) == sizeof(int);
-};
-
-template <typename T>
-struct remove_reference_wrapper
-{
-    using type = T;
-};
-
-template <typename T>
-struct remove_reference_wrapper<reference_wrapper<T>>
-{
-    using type = T &;
-};
+struct remove_reference_wrapper;
 
 template <typename T>
 using base_type_t =
@@ -123,6 +102,30 @@ using base_type_t =
                 type>::
             type>::
         type;
+
+template <typename T>
+struct is_reference_wrapper
+{
+    const static bool value = false;
+};
+
+template <typename T>
+struct is_reference_wrapper<reference_wrapper<T>>
+{
+    const static bool value = true;
+};
+
+template <typename T>
+struct remove_reference_wrapper
+{
+    using type = T;
+};
+
+template <typename T>
+struct remove_reference_wrapper<reference_wrapper<T>>
+{
+    using type = T &;
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 // reference_wrapper
@@ -388,8 +391,7 @@ struct check_param<T, typename std::enable_if<std::is_reference<T>::value>::type
 };
 
 template <typename T>
-struct check_param<T, typename std::enable_if<
-                          std::is_pointer<T>::value>::type>
+struct check_param<T, typename std::enable_if<std::is_pointer<T>::value>::type>
 {
     // only accepts [const] pointer to class and const char*
     // rejects char* and [const] std::string*
@@ -411,6 +413,25 @@ template <typename A>
 struct check_params_validity<A>
 {
     const static bool value = impl::check_param<A>::value;
+};
+
+template <>
+struct check_params_validity<>
+{
+    const static bool value = true;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// check_return_validity
+// check registered function return type validity
+// rejects pointer to non-class type, except for [const] char*
+////////////////////////////////////////////////////////////////////////////////
+template <typename T>
+struct check_return_validity
+{
+    const static bool value = !std::is_pointer<T>::value ||
+                              (std::is_class<base_type_t<T>>::value && !std::is_same<base_type_t<T>, std::string>::value) ||
+                              std::is_same<base_type_t<T>, char>::value;
 };
 
 ////////////////////////////////////////////////////////////////////////////////

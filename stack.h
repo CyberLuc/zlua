@@ -11,6 +11,7 @@ namespace zlua
 template <typename T, typename Enabled = void>
 struct stack_op;
 
+////////////////////////////////////////////////////////////////////////////////
 // integral, rejects char, bool
 template <typename T>
 struct stack_op<T, typename std::enable_if<
@@ -260,10 +261,6 @@ private:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-// following are composite types
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
 // reference_wrapper
 // <const char*>, <object_type>
 template <typename T>
@@ -344,17 +341,15 @@ struct tuple_op<0>
 template <typename... Args>
 struct stack_op<std::tuple<Args...>>
 {
-    using tuple_t = std::tuple<Args...>;
-
-    static void push(lua_State *ls, tuple_t &tuple)
+    static void push(lua_State *ls, std::tuple<Args...> &tuple)
     {
         impl::tuple_op<sizeof...(Args)>::push(ls, tuple);
     }
 
     // not implemented for this type
-    static void peek(lua_State *ls, tuple_t &tuple) {}
+    static void peek(lua_State *ls, std::tuple<Args...> &tuple) {}
 
-    static void pop(lua_State *ls, tuple_t &tuple, int pos = -1)
+    static void pop(lua_State *ls, std::tuple<Args...> &tuple, int pos = -1)
     {
         impl::tuple_op<sizeof...(Args)>::pop(ls, tuple, pos, false);
         if (lua_istable(ls, pos) != 0)

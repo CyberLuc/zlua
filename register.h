@@ -26,7 +26,10 @@ public:
     template <typename R, typename... Args>
     Registrar &def(const char *fname, R (T::*f)(Args...))
     {
-        // static_assert(check_params_validity<Args...>::value, "can't register function with non-const reference or pointer to arithmetic type to lua");
+        static_assert(check_params_validity<Args...>::value,
+                      "can't register function with parameter of non-const reference or pointer to non-class type to lua (except for const char*)");
+        static_assert(check_return_validity<R>::value,
+                      "can't register function with return type of pointer to non-class/std::string to lua (except for [const] char*)");
 
         using method_wrapper_t = userdata::Method<R (T::*)(Args...)>;
 

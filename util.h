@@ -45,12 +45,6 @@ struct tuple_caller<sequence<S...>>
         return f(std::get<S>(t)...);
     }
 
-    // template <typename C, typename R, typename T>
-    // static R call(R (C::*f)(), C *c, T &t)
-    // {
-    //     return (c->*f)();
-    // }
-
     template <typename C, typename R, typename... Args, typename T>
     static R call(R (C::*f)(Args...), C *c, T &t)
     {
