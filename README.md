@@ -221,6 +221,5 @@ print_enum_class 3
 * regsiter function type check support √
 * lua created object lifetime management √
 * uniform lua userdata for same object
-* multiple constructor support
 * error handle
 * more enum support: add count, validity check, etc
