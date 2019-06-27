@@ -107,6 +107,10 @@ private:
         lua_pushcfunction(this->ls_, (&metatable_newindex_function<T>));
         lua_rawset(this->ls_, -3);
 
+        lua_pushstring(this->ls_, "__gc");
+        lua_pushcfunction(this->ls_, (&lua_object_deleter<T>));
+        lua_rawset(this->ls_, -3);
+
         lua_pop(this->ls_, 1);
     }
 

@@ -186,11 +186,22 @@ struct stack_op<T, typename std::enable_if<
         auto *object_wrapper = static_cast<UserdataObject *>(lua_newuserdata(ls, sizeof(UserdataObject)));
         new (object_wrapper) UserdataObject;
         object_wrapper->ptr = new Base(std::move(b));
+        object_wrapper->need_release = true;
 
         prepare_metatable(ls);
     }
 
     // lvalue
+    static void push_new(lua_State *ls, Base *b, int pos = -1)
+    {
+        auto *object_wrapper = static_cast<UserdataObject *>(lua_newuserdata(ls, sizeof(UserdataObject)));
+        new (object_wrapper) UserdataObject;
+        object_wrapper->ptr = b;
+        object_wrapper->need_release = true;
+
+        prepare_metatable(ls);
+    }
+
     static void push(lua_State *ls, Base *b, int pos = -1)
     {
         auto *object_wrapper = static_cast<UserdataObject *>(lua_newuserdata(ls, sizeof(UserdataObject)));

@@ -13,6 +13,7 @@ struct Object
     T *ptr;
     size_t offset = 0;
     const bool is_const = std::is_const<T>::value;
+    bool need_release = false;
 };
 
 template <typename F>

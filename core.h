@@ -113,6 +113,9 @@ int lua_function_forwarder(lua_State *ls)
     return element_size<R>::value;
 }
 
+template <typename T>
+int lua_object_deleter(lua_State *ls);
+
 template <typename T, typename... Args>
 int lua_object_creator(lua_State *ls)
 {
@@ -121,7 +124,8 @@ int lua_object_creator(lua_State *ls)
     stack_op<wrapped_tuple_t>::pop(ls, params);
 
     T *t = tuple_construct<T>(params);
-    stack_op<T>::push(ls, t);
+    stack_op<T>::push_new(ls, t);
+
     return 1;
 }
 
@@ -129,6 +133,21 @@ template <typename T, typename... Args>
 int (*fetch_creator(void (*)(Args...)))(lua_State *)
 {
     return &lua_object_creator<T, Args...>;
+}
+
+template <typename T>
+int lua_object_deleter(lua_State *ls)
+{
+    userdata::Object<T> *obj = static_cast<userdata::Object<T> *>(lua_touserdata(ls, 1));
+    if (obj->need_release)
+    {
+        cout << __PRETTY_FUNCTION__ << " " << (void *)obj->ptr << endl;
+        obj->need_release = false;
+        delete obj->ptr;
+        obj->ptr = nullptr;
+    }
+
+    return 0;
 }
 
 } // namespace zlua

@@ -15,3 +15,8 @@ derived:say2()
 print("\nderived:to_base1():say2()")
 derived:to_base1():say2()
 
+local b = derived
+collectgarbage()
+derived = nil
+
+os.execute("sleep 3")
