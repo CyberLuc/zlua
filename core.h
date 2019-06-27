@@ -116,18 +116,19 @@ int lua_function_forwarder(lua_State *ls)
 
     using wrapped_tuple_t = pack_tuple_t<Args...>;
     wrapped_tuple_t params;
-    tuple_filler<sizeof...(Args)>::fill(ls, params);
+    stack_op<wrapped_tuple_t>::pop(ls, params);
 
     WrapperCall<T, R, decltype(params), Args...>::call(ls, func_wrapper->ptr, t, params);
-    return std::is_same<R, void>::value ? 0 : 1;
+    return element_size<R>::value;
 }
 
 template <typename T, typename... Args>
 int lua_object_creator(lua_State *ls)
 {
-    using tuple_t = pack_tuple_t<Args...>;
-    tuple_t params;
-    tuple_filler<sizeof...(Args)>::fill(ls, params);
+    using wrapped_tuple_t = pack_tuple_t<Args...>;
+    wrapped_tuple_t params;
+    stack_op<wrapped_tuple_t>::pop(ls, params);
+
     T *t = tuple_construct<T>(params);
     stack_op<T>::push(ls, t);
     return 1;

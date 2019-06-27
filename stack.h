@@ -14,8 +14,8 @@ struct stack_op;
 // integral, rejects char, bool
 template <typename T>
 struct stack_op<T, typename std::enable_if<
-                       is_integral_type<base_type_t<T>>::value>::
-                       type>
+                       !is_reference_wrapper<T>::value &&
+                       is_integral_type<base_type_t<T>>::value>::type>
 {
     using Base = base_type_t<T>;
 
@@ -38,6 +38,7 @@ struct stack_op<T, typename std::enable_if<
     static typename std::enable_if<!std::is_pointer<U>::value>::type
     pop(lua_State *ls, U &u, int pos = -1)
     {
+        cout << __PRETTY_FUNCTION__ << endl;
         peek(ls, u, pos);
         lua_remove(ls, pos);
     }
@@ -46,7 +47,9 @@ struct stack_op<T, typename std::enable_if<
 ////////////////////////////////////////////////////////////////////////////////
 // floating point
 template <typename T>
-struct stack_op<T, typename std::enable_if<std::is_floating_point<base_type_t<T>>::value>::type>
+struct stack_op<T, typename std::enable_if<
+                       !is_reference_wrapper<T>::value &&
+                       std::is_floating_point<base_type_t<T>>::value>::type>
 {
     using Base = base_type_t<T>;
 
@@ -77,7 +80,9 @@ struct stack_op<T, typename std::enable_if<std::is_floating_point<base_type_t<T>
 ////////////////////////////////////////////////////////////////////////////////
 // bool
 template <typename T>
-struct stack_op<T, typename std::enable_if<std::is_same<bool, base_type_t<T>>::value>::type>
+struct stack_op<T, typename std::enable_if<
+                       !is_reference_wrapper<T>::value &&
+                       std::is_same<bool, base_type_t<T>>::value>::type>
 {
     static void push(lua_State *ls, bool b)
     {
@@ -100,7 +105,9 @@ struct stack_op<T, typename std::enable_if<std::is_same<bool, base_type_t<T>>::v
 ////////////////////////////////////////////////////////////////////////////////
 // string, char
 template <typename T>
-struct stack_op<T, typename std::enable_if<is_string_type<base_type_t<T>>::value>::type>
+struct stack_op<T, typename std::enable_if<
+                       !is_reference_wrapper<T>::value &&
+                       is_string_type<base_type_t<T>>::value>::type>
 {
     using Base = base_type_t<T>;
 
@@ -120,18 +127,6 @@ struct stack_op<T, typename std::enable_if<is_string_type<base_type_t<T>>::value
     }
 
     static void peek(lua_State *ls, std::string &s, int pos = -1)
-    {
-        ZLUA_ARG_CHECK_THROW(ls, lua_isstring(ls, pos), pos, "not a string value");
-        s = luaL_checkstring(ls, pos);
-    }
-
-    static void peek(lua_State *ls, reference_wrapper<std::string> &s, int pos = -1)
-    {
-        ZLUA_ARG_CHECK_THROW(ls, lua_isstring(ls, pos), pos, "not a string value");
-        s = luaL_checkstring(ls, pos);
-    }
-
-    static void peek(lua_State *ls, reference_wrapper<const std::string> &s, int pos = -1)
     {
         ZLUA_ARG_CHECK_THROW(ls, lua_isstring(ls, pos), pos, "not a string value");
         s = luaL_checkstring(ls, pos);
@@ -163,24 +158,6 @@ struct stack_op<T, typename std::enable_if<is_string_type<base_type_t<T>>::value
         lua_remove(ls, pos);
     }
 
-    static void pop(lua_State *ls, reference_wrapper<std::string> &s, int pos = -1)
-    {
-        peek(ls, s, pos);
-        lua_remove(ls, pos);
-    }
-
-    static void pop(lua_State *ls, reference_wrapper<const std::string> &s, int pos = -1)
-    {
-        peek(ls, s, pos);
-        lua_remove(ls, pos);
-    }
-
-    static void pop(lua_State *ls, reference_wrapper<const char> &s, int pos = -1)
-    {
-        peek(ls, s, pos);
-        lua_remove(ls, pos);
-    }
-
 private:
     static void _push(lua_State *ls, const char *s, size_t l = 0)
     {
@@ -193,7 +170,10 @@ private:
 // rejects std::string and stl containers(vector, map, set, etc...)
 template <typename T>
 struct stack_op<T, typename std::enable_if<
-                       is_object_type<base_type_t<T>>::value && !std::is_same<base_type_t<T>, std::string>::value && !is_stl_container<base_type_t<T>>::value>::type>
+                       is_object_type<base_type_t<T>>::value &&
+                       !std::is_same<base_type_t<T>, std::string>::value &&
+                       !is_stl_container<base_type_t<T>>::value &&
+                       !is_reference_wrapper<T>::value>::type>
 {
     using Base = base_type_t<T>;
     using UserdataObject = userdata::Object<Base>;
@@ -202,7 +182,6 @@ struct stack_op<T, typename std::enable_if<
     // rvalue
     static void push(lua_State *ls, Base &&b, int pos = -1)
     {
-
         auto *object_wrapper = static_cast<UserdataObject *>(lua_newuserdata(ls, sizeof(UserdataObject)));
         new (object_wrapper) UserdataObject;
         object_wrapper->ptr = new Base(std::move(b));
@@ -213,8 +192,6 @@ struct stack_op<T, typename std::enable_if<
     // lvalue
     static void push(lua_State *ls, Base *b, int pos = -1)
     {
-        using UserdataObject = userdata::Object<Base>;
-
         auto *object_wrapper = static_cast<UserdataObject *>(lua_newuserdata(ls, sizeof(UserdataObject)));
         new (object_wrapper) UserdataObject;
         object_wrapper->ptr = b;
@@ -245,7 +222,6 @@ struct stack_op<T, typename std::enable_if<
     static void peek(lua_State *ls, Base &b, int pos = -1)
     {
         // ZLUA_ARG_CHECK_THROW(ls, luaL_checkudata(ls, pos, type_info<Base>::name()), pos, "incorrect userdata type");
-
         auto *object_wrapper = static_cast<UserdataObject *>(lua_touserdata(ls, pos));
         b = *object_wrapper->ptr;
     }
@@ -253,9 +229,6 @@ struct stack_op<T, typename std::enable_if<
     static void peek(lua_State *ls, Base *&b, int pos = -1)
     {
         // ZLUA_ARG_CHECK_THROW(ls, luaL_checkudata(ls, pos, type_info<Base>::name()), pos, "incorrect userdata type");
-
-        // cout << __PRETTY_FUNCTION__ << endl;
-
         auto *object_wrapper = static_cast<UserdataObject *>(lua_touserdata(ls, pos));
         ZLUA_ARG_CHECK_THROW(ls, !object_wrapper->is_const, pos, "cannot cast const " + type_name<Base>() + " to non-const reference");
 
@@ -273,17 +246,121 @@ struct stack_op<T, typename std::enable_if<
     template <typename U>
     static void pop(lua_State *ls, U &u, int pos = -1)
     {
-        // cout << __PRETTY_FUNCTION__ << ", " << type_name<base_type_t<U>>() << endl;
         peek(ls, u, pos);
+        lua_remove(ls, pos);
     }
 
 private:
     static void prepare_metatable(lua_State *ls)
     {
         // ZLUA_CHECK_THROW(ls, type_info<Base>::is_registered(), std::string("prepare_metatable for type <") + type_name<Base>() + "> failed, not registered");
-
         const char *metatable_name = type_info<Base>::metatable_name();
         luaL_setmetatable(ls, metatable_name);
+    }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// following are composite types
+////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+// reference_wrapper
+// <const char*>, <object_type>
+template <typename T>
+struct stack_op<T, typename std::enable_if<is_reference_wrapper<T>::value>::type>
+{
+    static void push(lua_State *ls, T &t)
+    {
+        stack_op<typename T::referenced_type>::push(ls, t.get_ref());
+    }
+
+    static void peek(lua_State *ls, T &t, int pos = -1)
+    {
+        stack_op<typename T::referenced_type>::peek(ls, t.get_ptr(), pos);
+    }
+
+    static void pop(lua_State *ls, T &t, int pos = -1)
+    {
+        stack_op<typename T::referenced_type>::peek(ls, t.get_ptr(), pos);
+    }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// tuple
+// read from lua stack a series of values
+// or read from a table on lua stack
+namespace impl
+{
+template <size_t N>
+struct tuple_op
+{
+    template <typename... Args>
+    static void push(lua_State *ls, std::tuple<Args...> &t)
+    {
+        tuple_op<N - 1>::push(ls, t);
+        stack_op<decltype(std::get<N - 1>(t))>::push(ls, std::get<N - 1>(t));
+    }
+
+    template <typename... Args>
+    static void pop(lua_State *ls, std::tuple<Args...> &t, int table_pos, bool reversed_order = false)
+    {
+        if (!reversed_order)
+        {
+            if (lua_istable(ls, table_pos) != 0)
+            {
+                lua_pushinteger(ls, N);
+                lua_rawget(ls, table_pos);
+            }
+
+            stack_op<decltype(std::get<N - 1>(t))>::pop(ls, std::get<N - 1>(t));
+        }
+
+        tuple_op<N - 1>::pop(ls, t, table_pos, reversed_order);
+
+        if (reversed_order)
+        {
+            if (lua_istable(ls, table_pos) != 0)
+            {
+                lua_pushinteger(ls, N);
+                lua_rawget(ls, table_pos);
+            }
+
+            stack_op<decltype(std::get<N - 1>(t))>::pop(ls, std::get<N - 1>(t));
+        }
+    }
+};
+
+template <>
+struct tuple_op<0>
+{
+    template <typename... Args>
+    static void push(lua_State *ls, std::tuple<Args...> &t) {}
+
+    template <typename... Args>
+    static void pop(lua_State *ls, std::tuple<Args...> &t, int table_pos, bool reversed_order = false) {}
+};
+} // namespace impl
+
+template <typename... Args>
+struct stack_op<std::tuple<Args...>>
+{
+    using tuple_t = std::tuple<Args...>;
+
+    static void push(lua_State *ls, tuple_t &tuple)
+    {
+        impl::tuple_op<sizeof...(Args)>::push(ls, tuple);
+    }
+
+    // not implemented for this type
+    static void peek(lua_State *ls, tuple_t &tuple) {}
+
+    static void pop(lua_State *ls, tuple_t &tuple, int pos = -1)
+    {
+        impl::tuple_op<sizeof...(Args)>::pop(ls, tuple, pos, false);
+        if (lua_istable(ls, pos) != 0)
+        {
+            lua_remove(ls, pos);
+        }
     }
 };
 

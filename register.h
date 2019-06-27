@@ -26,7 +26,8 @@ public:
     template <typename R, typename... Args>
     Registrar &def(const char *fname, R (T::*f)(Args...))
     {
-        // static_assert(assert_no_pod_nonconst_ref_ptr<R, Args...>::value, "can't register function with non-const reference or pointer to arithmetic type to lua");
+        // static_assert(check_params_validity<Args...>::value, "can't register function with non-const reference or pointer to arithmetic type to lua");
+
         using method_wrapper_t = userdata::Method<R (T::*)(Args...)>;
 
         luaL_getmetatable(this->ls_, type_info<T>::metatable_name());

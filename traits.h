@@ -37,6 +37,9 @@ struct is_stl_container
     template <typename K>
     static int detail(std::list<K> *);
 
+    template <typename... Args>
+    static int detail(std::tuple<Args...> *);
+
     template <typename U>
     static char detail(U *);
 
@@ -69,7 +72,31 @@ struct is_object_type
 };
 
 template <typename T>
+struct is_tuple_type
+{
+    template <typename... Args>
+    static int detail(std::tuple<Args...> *);
+
+    template <typename U>
+    static char detail(U *);
+
+    const static bool value = sizeof(decltype(detail((T *)(nullptr)))) == sizeof(int);
+};
+
+template <typename T>
 struct reference_wrapper;
+
+template <typename T>
+struct is_reference_wrapper
+{
+    template <typename U>
+    static int detail(reference_wrapper<U> *);
+
+    template <typename U>
+    static char detail(U *);
+
+    const static bool value = sizeof(decltype(detail((T *)(nullptr)))) == sizeof(int);
+};
 
 template <typename T>
 struct remove_reference_wrapper
@@ -105,12 +132,17 @@ using base_type_t =
 template <typename T>
 struct reference_wrapper
 {
+    using type = T &;
+    using referenced_type = T;
+
     reference_wrapper() : ptr(nullptr) {}
     reference_wrapper(T &t) : ptr(&t) {}
     reference_wrapper(const reference_wrapper<T> &w) : ptr(w.ptr) {}
 
-    T &get() { return *this->ptr; }
-    const T &get() const { return *this->ptr; }
+    T &get_ref() { return *this->ptr; }
+    const T &get_ref() const { return *this->ptr; }
+
+    T *&get_ptr() { return this->ptr; }
 
     reference_wrapper<T> &operator=(const T &t)
     {
@@ -143,6 +175,24 @@ struct reference_wrapper
 
 private:
     T *ptr;
+};
+
+template <typename T>
+struct element_size
+{
+    const static size_t value = 1;
+};
+
+template <typename... Args>
+struct element_size<std::tuple<Args...>>
+{
+    const static size_t value = sizeof...(Args);
+};
+
+template <>
+struct element_size<void>
+{
+    const static size_t value = 0;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -348,8 +398,11 @@ struct check_param<T, typename std::enable_if<
 };
 } // namespace impl
 
+template <typename... Args>
+struct check_params_validity;
+
 template <typename A, typename... Args>
-struct check_params_validity
+struct check_params_validity<A, Args...>
 {
     const static bool value = impl::check_param<A>::value && check_params_validity<Args...>::value;
 };

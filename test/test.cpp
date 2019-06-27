@@ -52,7 +52,7 @@ public:
 class Derived : public Base2, public Base1
 {
 public:
-    virtual void say()
+    virtual void say(int *)
     {
         cout << __FUNCTION__ << " from Derived" << endl;
     }
@@ -88,9 +88,11 @@ int main()
     // func_array[0] = fun_template<int>;
     // func_array[1] = fun_template<double>;
 
-    // return 0;
+    cout << std::is_class<std::tuple<int, int>>::value << endl;
+    cout << zlua::type_name<std::tuple<int, int>>() << endl;
 
     zlua::Engine engine;
+    auto ls = engine.get_lua_state();
 
     engine.reg<Enum>("Enum")
         .def("Zero", Enum::Zero)

@@ -30,42 +30,6 @@ template <typename... Args>
 using sequence_t = typename generate_sequence<sizeof...(Args)>::type;
 
 ////////////////////////////////////////////////////////////////////////////////
-// tuple_fill
-// to universally fill a tuple with values read from lua stack
-////////////////////////////////////////////////////////////////////////////////
-template <size_t N>
-struct tuple_filler
-{
-    template <typename T, typename U>
-    static void read_stack(lua_State *ls, U &u)
-    {
-        stack_op<T>::pop(ls, u);
-    }
-
-    template <typename T, typename U>
-    static void read_stack(lua_State *ls, reference_wrapper<U> &ref)
-    {
-        U *u;
-        stack_op<T>::pop(ls, u);
-        ref.assign(*u);
-    }
-
-    template <typename... Args>
-    static void fill(lua_State *ls, std::tuple<Args...> &t)
-    {
-        read_stack<base_type_t<decltype(std::get<N - 1>(t))>>(ls, std::get<N - 1>(t));
-        tuple_filler<N - 1>::fill(ls, t);
-    }
-};
-
-template <>
-struct tuple_filler<0>
-{
-    template <typename... Args>
-    static void fill(lua_State *ls, std::tuple<Args...> &t) {}
-};
-
-////////////////////////////////////////////////////////////////////////////////
 // tuple_call
 // to universally call a function with tuple as supplier of function parameters
 ////////////////////////////////////////////////////////////////////////////////
