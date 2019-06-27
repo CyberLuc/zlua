@@ -2,9 +2,98 @@
 #include "common.h"
 #include "core.h"
 #include "meta.h"
+#include <vector>
 
 namespace zlua
 {
+class Engine;
+template <typename T, typename Ctor, typename... Bases>
+class Registrar;
+
+template <typename T, typename Enabled = void>
+struct vector_registrar
+{
+    using vec_t = std::vector<T>;
+
+    static void reg(lua_State *ls)
+    {
+        std::string vec_name = std::string("vector.") + type_info<T>::name();
+
+        Registrar<vec_t, ctor()>(ls, vec_name.c_str())
+            .def("push_back", (void (vec_t::*)(const T &)) & vec_t::push_back)
+            .def("pop_back", &vec_t::pop_back)
+            .def("at", (const T &(vec_t::*)(size_t) const) & vec_t::at)
+            .def("clear", &vec_t::clear)
+            .def("size", &vec_t::size)
+            //
+            ;
+
+        // vector.int.new()
+    }
+};
+
+template <typename T>
+struct vector_registrar<T, typename std::enable_if<is_stl_container<T>::value>::type>
+{
+    static void reg(lua_State *ls) {}
+};
+
+template <typename T, typename Ctor>
+struct prepare_type
+{
+    static void prepare_type_table(lua_State *ls, const char *name)
+    {
+        lua_newtable(ls);
+
+        lua_pushstring(ls, "new");
+        lua_pushcfunction(ls, fetch_creator<T>((Ctor *)0));
+        lua_settable(ls, -3);
+
+        lua_pushstring(ls, "clone");
+        lua_pushcfunction(ls, &lua_object_cloner_wrapper<T>::clone);
+        lua_settable(ls, -3);
+
+        lua_setglobal(ls, name);
+    }
+};
+
+template <typename T, typename Ctor>
+struct prepare_type<std::vector<T>, Ctor>
+{
+    static void prepare_type_table(lua_State *ls, const char *name)
+    {
+        bool is_new = false;
+
+        lua_getglobal(ls, "vector");
+        if (lua_isnil(ls, -1) != 0)
+        {
+            lua_newtable(ls);
+            is_new = true;
+        }
+
+        lua_pushstring(ls, type_info<T>::name());
+        lua_newtable(ls);
+
+        lua_pushstring(ls, "new");
+        lua_pushcfunction(ls, fetch_creator<std::vector<T>>((Ctor *)0));
+        lua_settable(ls, -3);
+
+        lua_pushstring(ls, "clone");
+        lua_pushcfunction(ls, &lua_object_cloner_wrapper<std::vector<T>>::clone);
+        lua_settable(ls, -3);
+
+        lua_settable(ls, -3);
+
+        if (is_new)
+        {
+            lua_setglobal(ls, "vector");
+        }
+        else
+        {
+            lua_pop(ls, 1);
+        }
+    }
+};
 
 template <typename T, typename Ctor, typename... Bases>
 class Registrar
@@ -12,6 +101,15 @@ class Registrar
     friend class Engine;
 
 public:
+    ~Registrar()
+    {
+        if (this->name_ != nullptr)
+        {
+            std::string vec_name = std::string("vector.") + type_info<T>::name();
+            vector_registrar<T>::reg(this->ls_);
+        }
+    }
+
     template <typename F>
     Registrar &def(const char *fname, F f)
     {
@@ -99,7 +197,7 @@ public:
         return *this;
     }
 
-private:
+    // private:
     Registrar(lua_State *ls, const char *name)
         : ls_(ls)
     {
@@ -110,7 +208,9 @@ private:
 
         this->name_ = name;
 
-        this->prepare_type_table();
+        prepare_type<T, Ctor>::prepare_type_table(ls, name);
+
+        // this->prepare_type_table();
         this->prepare_metatable();
     }
 

@@ -103,7 +103,7 @@ using base_type_t =
             type>::
         type;
 
-template <typename T>
+template <typename T, typename Enabled = void>
 struct is_reference_wrapper
 {
     const static bool value = false;
@@ -111,6 +111,18 @@ struct is_reference_wrapper
 
 template <typename T>
 struct is_reference_wrapper<reference_wrapper<T>>
+{
+    const static bool value = true;
+};
+
+template <typename T>
+struct is_reference_wrapper<reference_wrapper<T> &>
+{
+    const static bool value = true;
+};
+
+template <typename T>
+struct is_reference_wrapper<const reference_wrapper<T> &>
 {
     const static bool value = true;
 };
@@ -355,9 +367,18 @@ struct pack_element<T, typename std::enable_if<is_string_type<base_type_t<T>>::v
 
 template <typename T>
 struct pack_element<T, typename std::enable_if<std::is_reference<T>::value &&
+                                               !is_integral_type<base_type_t<T>>::value &&
                                                !is_string_type<base_type_t<T>>::value>::type>
 {
     using type = reference_wrapper<typename std::remove_reference<T>::type>;
+    // using type = reference_wrapper<base_type_t<T>>;
+};
+
+template <typename T>
+struct pack_element<T, typename std::enable_if<std::is_reference<T>::value &&
+                                               is_integral_type<base_type_t<T>>::value>::type>
+{
+    using type = base_type_t<T>;
 };
 } // namespace impl
 
@@ -387,7 +408,7 @@ template <typename T>
 struct check_param<T, typename std::enable_if<std::is_reference<T>::value>::type>
 {
     // only accepts [const] reference to class
-    const static bool value = std::is_class<base_type_t<T>>::value;
+    const static bool value = std::is_class<base_type_t<T>>::value || std::is_const<typename std::remove_reference<T>::type>::value;
 };
 
 template <typename T>

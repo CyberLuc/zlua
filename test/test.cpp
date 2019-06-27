@@ -22,6 +22,11 @@ public:
     {
         cout << __FUNCTION__ << " from SuperBase" << endl;
     }
+
+    void say4(const SuperBase &)
+    {
+        cout << __FUNCTION__ << " from SuperBase" << endl;
+    }
 };
 
 class Base1 : public SuperBase
@@ -98,6 +103,7 @@ int main()
     engine.reg<SuperBase, ctor()>("SuperBase")
         .def("say", &SuperBase::say)
         .def("say3", &SuperBase::say3)
+        .def("say4", &SuperBase::say4)
         //
         ;
 
@@ -118,19 +124,6 @@ int main()
         .def("say", &Derived::say)
         .def("say2", &Derived::say2)
         .def("getd", getd);
-
-    // typedef void (SuperBase::*mptr)();
-
-    // Derived *obj = &d;
-    // mptr ptr = &SuperBase::say3;
-    // //cout << (void *)obj << " " << zlua::type_name<decltype(ptr)>() << endl;
-
-    // zlua::userdata::object_t<Derived> uod;
-    // uod.ptr = obj;
-
-    // zlua::userdata::object_t<SuperBase> *uob = (zlua::userdata::object_t<SuperBase> *)&uod;
-    // auto o = (SuperBase *)((char *)uob->ptr + zlua::calc_base_offset<Derived, SuperBase>());
-    // (o->*ptr)();
 
     engine.load_file("./test.lua");
 

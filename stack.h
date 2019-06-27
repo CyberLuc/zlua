@@ -183,9 +183,10 @@ private:
 // rejects std::string and stl containers(vector, map, set, etc...)
 template <typename T>
 struct stack_op<T, typename std::enable_if<
-                       is_object_type<base_type_t<T>>::value &&
+                       std::is_class<base_type_t<T>>::value &&
                        !std::is_same<base_type_t<T>, std::string>::value &&
-                       !is_stl_container<base_type_t<T>>::value &&
+                       //!is_stl_container<base_type_t<T>>::value &&
+                       !is_tuple_type<base_type_t<T>>::value &&
                        !is_reference_wrapper<T>::value>::type>
 {
     using Base = base_type_t<T>;
@@ -311,23 +312,49 @@ private:
 // reference_wrapper
 // <const char*>, <object_type>
 template <typename T>
-struct stack_op<T, typename std::enable_if<is_reference_wrapper<T>::value>::type>
+// struct stack_op<T, typename std::enable_if<is_reference_wrapper<T>::value>::type>
+struct stack_op<reference_wrapper<T>>
 {
-    static void push(lua_State *ls, T &t)
+    using wrapper_t = reference_wrapper<T>;
+    using ref_t = typename wrapper_t::referenced_type;
+
+    static void push(lua_State *ls, wrapper_t &t)
     {
-        stack_op<typename T::referenced_type>::push(ls, t.get_ref());
+        stack_op<ref_t>::push(ls, t.get_ref());
     }
 
-    static void peek(lua_State *ls, T &t, int pos = -1)
+    static void peek(lua_State *ls, wrapper_t &t, int pos = -1)
     {
-        stack_op<typename T::referenced_type>::peek(ls, t.get_ptr(), pos);
+        stack_op<ref_t>::peek(ls, t.get_ptr(), pos);
     }
 
-    static void pop(lua_State *ls, T &t, int pos = -1)
+    static void pop(lua_State *ls, wrapper_t &t, int pos = -1)
     {
-        stack_op<typename T::referenced_type>::pop(ls, t.get_ptr(), pos);
+        stack_op<ref_t>::pop(ls, t.get_ptr(), pos);
     }
 };
+
+// template <typename T>
+// struct stack_op<reference_wrapper<T> &>
+// {
+//     using wrapper_t = reference_wrapper<T>;
+//     using ref_t = typename wrapper_t::referenced_type;
+
+//     static void push(lua_State *ls, wrapper_t &t)
+//     {
+//         stack_op<ref_t>::push(ls, t.get_ref());
+//     }
+
+//     static void peek(lua_State *ls, wrapper_t &t, int pos = -1)
+//     {
+//         stack_op<ref_t>::peek(ls, t.get_ptr(), pos);
+//     }
+
+//     static void pop(lua_State *ls, wrapper_t &t, int pos = -1)
+//     {
+//         stack_op<ref_t>::pop(ls, t.get_ptr(), pos);
+//     }
+// };
 
 ////////////////////////////////////////////////////////////////////////////////
 // tuple
@@ -348,6 +375,8 @@ struct tuple_op
     template <typename... Args>
     static void pop(lua_State *ls, std::tuple<Args...> &t, int table_pos, bool reversed_order = false)
     {
+        using elem_t = typename std::remove_reference<decltype(std::get<N - 1>(t))>::type;
+
         if (!reversed_order)
         {
             if (lua_istable(ls, table_pos) != 0)
@@ -356,7 +385,7 @@ struct tuple_op
                 lua_rawget(ls, table_pos);
             }
 
-            stack_op<decltype(std::get<N - 1>(t))>::pop(ls, std::get<N - 1>(t));
+            stack_op<elem_t>::pop(ls, std::get<N - 1>(t));
         }
 
         tuple_op<N - 1>::pop(ls, t, table_pos, reversed_order);
@@ -369,7 +398,7 @@ struct tuple_op
                 lua_rawget(ls, table_pos);
             }
 
-            stack_op<decltype(std::get<N - 1>(t))>::pop(ls, std::get<N - 1>(t));
+            stack_op<elem_t>::pop(ls, std::get<N - 1>(t));
         }
     }
 };
@@ -408,5 +437,25 @@ struct stack_op<std::tuple<Args...>>
 
 ////////////////////////////////////////////////////////////////////////////////
 // TODO stl containers specialization
+// template <typename T>
+// struct stack_op<std::vector<T>>
+// {
+//     static void push(lua_State *ls, std::vector<T> &tuple)
+//     {
+//         // impl::tuple_op<sizeof...(Args)>::push(ls, tuple);
+//     }
+
+//     static void push_new(lua_State *ls, std::vector<T> *tuple)
+//     {
+//         // impl::tuple_op<sizeof...(Args)>::push(ls, tuple);
+//     }
+
+//     // not implemented for this type
+//     static void peek(lua_State *ls, std::vector<T> &tuple) {}
+
+//     static void pop(lua_State *ls, std::vector<T> &tuple, int pos = -1)
+//     {
+//     }
+// };
 
 } // namespace zlua

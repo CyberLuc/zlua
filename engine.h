@@ -17,6 +17,7 @@ public:
         {
             this->ls_ = luaL_newstate();
             luaL_openlibs(this->ls_);
+            reg_basic_types();
             dtor_release_ = true;
         }
     }
@@ -70,6 +71,28 @@ public:
     }
 
 private:
+    void reg_basic_types()
+    {
+        type_info<int>::set_name("int");
+        type_info<double>::set_name("double");
+        type_info<float>::set_name("float");
+        type_info<uint64_t>::set_name("uint64_t");
+        type_info<int64_t>::set_name("int64_t");
+        type_info<bool>::set_name("bool");
+        type_info<char>::set_name("char");
+        type_info<std::string>::set_name("string");
+
+        this->reg<std::vector<int>, ctor()>("int")
+            .def("push_back", (void (std::vector<int>::*)(const int &)) & std::vector<int>::push_back)
+            .def("pop_back", &std::vector<int>::pop_back)
+            .def("at", (const int &(std::vector<int>::*)(size_t) const) & std::vector<int>::at)
+            .def("atc", (int &(std::vector<int>::*)(size_t)) & std::vector<int>::at)
+            .def("clear", &std::vector<int>::clear)
+            .def("size", &std::vector<int>::size)
+            //
+            ;
+    }
+
     lua_State *ls_;
     bool dtor_release_;
 };

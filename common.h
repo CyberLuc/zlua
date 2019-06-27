@@ -7,6 +7,8 @@ using std::boolalpha;
 using std::cout;
 using std::endl;
 
+#define ctor(args...) void(args)
+
 namespace zlua
 {
 
